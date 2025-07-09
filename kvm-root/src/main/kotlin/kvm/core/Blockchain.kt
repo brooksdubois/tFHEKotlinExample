@@ -22,19 +22,22 @@ class Blockchain {
 
     fun addBlock(records: List<SimpleRecord>, contract: List<KVEInstruction>): Block {
         val kve = KVE()
-//        if (!kve.validateBatchWithContract(records, contract)) {
-//            throw IllegalArgumentException("One or more records failed contract validation")
-//        }
+        val validRecords = records.filter { kve.validateWithContract(it, contract) }
+
+        if (validRecords.isEmpty()) {
+            throw IllegalArgumentException("No valid records to add")
+        }
 
         val previousBlock = getLatestBlock() ?: throw IllegalStateException("Genesis block must be mined first")
         val newBlock = createBlock(
             index = previousBlock.index + 1,
             previousHash = previousBlock.hash,
-            records = records
+            records = validRecords
         )
         chain.add(newBlock)
         return newBlock
     }
+
 
     private fun createBlock(index: Int, previousHash: String, records: List<SimpleRecord>): Block {
         val timestamp = Instant.now().epochSecond
