@@ -1,6 +1,7 @@
 package kvm.instruction
 
 sealed class KVEInstruction {
-    data class GreaterThan(val field: String, val value: Long) : KVEInstruction()
-    data class Equals(val field: String, val value: String) : KVEInstruction()
+    data class VoteEquals(val expected: Boolean) : KVEInstruction()
+    data class AddressEquals(val expected: String) : KVEInstruction()
+    // later: GreaterThanEncrypted(val field: String, val value: Int)
 }
