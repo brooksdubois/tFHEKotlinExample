@@ -22,9 +22,9 @@ class Blockchain {
 
     fun addBlock(records: List<SimpleRecord>, contract: List<KVEInstruction>): Block {
         val kve = KVE()
-        if (!kve.validateBatchWithContract(records, contract)) {
-            throw IllegalArgumentException("One or more records failed contract validation")
-        }
+//        if (!kve.validateBatchWithContract(records, contract)) {
+//            throw IllegalArgumentException("One or more records failed contract validation")
+//        }
 
         val previousBlock = getLatestBlock() ?: throw IllegalStateException("Genesis block must be mined first")
         val newBlock = createBlock(
