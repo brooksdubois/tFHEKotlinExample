@@ -1,4 +1,4 @@
-package kvm.encrpted
+package kvm.encrypted
 
 class EncryptedInt(private val plaintext: Int) {
     fun greaterThan(value: Int): EncryptedBool {

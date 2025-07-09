@@ -1,4 +1,4 @@
-package kvm.core
+package kvm.instruction
 
 sealed class KVEInstruction {
     data class GreaterThan(val field: String, val value: Int) : KVEInstruction()

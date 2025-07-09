@@ -1,5 +1,6 @@
 package kvm.core
 
+import kvm.instruction.KVEInstruction
 import kvm.model.Block
 import kvm.model.SimpleRecord
 import java.time.Instant
@@ -19,10 +20,10 @@ class Blockchain {
         return genesis
     }
 
-    fun addBlock(records: List<SimpleRecord>): Block {
+    fun addBlock(records: List<SimpleRecord>, contract: List<KVEInstruction>): Block {
         val kve = KVE()
-        if (!kve.validateBatch(records)) {
-            throw IllegalArgumentException("Record batch failed validation")
+        if (!kve.validateBatchWithContract(records, contract)) {
+            throw IllegalArgumentException("One or more records failed contract validation")
         }
 
         val previousBlock = getLatestBlock() ?: throw IllegalStateException("Genesis block must be mined first")
