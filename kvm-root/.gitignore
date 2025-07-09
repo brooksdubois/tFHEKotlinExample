@@ -1,45 +1,38 @@
-.gradle
+# === Kotlin / Gradle ===
+.gradle/
 build/
-!gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### IntelliJ IDEA ###
-.idea/modules.xml
-.idea/jarRepositories.xml
-.idea/compiler.xml
-.idea/libraries/
-*.iws
+out/
+.idea/
 *.iml
 *.ipr
-out/
-!**/src/main/**/out/
-!**/src/test/**/out/
+*.iws
 
-### Kotlin ###
-.kotlin
+# === Kotlin/JVM Caches ===
+*.class
+*.jar
+*.war
+*.ear
+*.log
+*.kts~
 
-### Eclipse ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-bin/
-!**/src/main/**/bin/
-!**/src/test/**/bin/
+# === Rust (cargo) ===
+/kvm-blockchain/target/
+/kvm-blockchain/Cargo.lock
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
+# If you use Cargo outside of kvm-blockchain, adjust paths:
+# /target/
 
-### VS Code ###
-.vscode/
+# === JNI native build artifacts ===
+/kvm-blockchain/libs/
+*.so
+*.dylib
+*.dll
 
-### Mac OS ###
+# === OS cruft ===
 .DS_Store
+Thumbs.db
+
+# === Kotlin serialization ===
+*.json
+client.key
+encrypted_tally.json

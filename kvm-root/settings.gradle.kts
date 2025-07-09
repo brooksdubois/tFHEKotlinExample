@@ -1,5 +1,7 @@
-plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
-}
-rootProject.name = "kvm-blockchain"
+rootProject.name = "kvm"
 
+include(":kvm-blockchain")
+include(":verifier")
+
+project(":kvm-blockchain").projectDir = file("kvm-blockchain")
+project(":verifier").projectDir = file("verifier")
