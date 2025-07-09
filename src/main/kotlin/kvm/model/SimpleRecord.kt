@@ -1,12 +1,12 @@
 package kvm.model
 
-import kvm.encrpted.EncryptedInt
+import kvm.encrypted.EncryptedInt
 
 data class SimpleRecord(
     val id: String,
     val name: String,
     val address: String,
-    //val age: Int,
     val age: EncryptedInt,
-    val timestamp: Long
+    val timestamp: Long,
+    val vote: EncryptedInt,
 )
