@@ -3,7 +3,6 @@ use std::sync::OnceLock;
 use jni::JNIEnv;
 use jni::objects::{JClass, JByteArray};
 use jni::sys::{jbyteArray, jlong, jboolean};
-use tfhe::core_crypto::entities::{LweCiphertext, LweSecretKey};
 
 // Global TFHE keys
 static CLIENT_KEY: OnceLock<ClientKey> = OnceLock::new();
@@ -119,6 +118,23 @@ pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1xor(
     let ct = key.xor(a, b);
     Box::into_raw(Box::new(ct)) as jlong
 }
+
+#[no_mangle]
+pub extern "C" fn Java_jniNative_TfheBridgeJNI_serialize_1ciphertext(
+    env: JNIEnv,
+    _class: JClass,
+    ptr: jlong,
+) -> jbyteArray {
+    let ct = unsafe { &*(ptr as *const Ciphertext) };
+    let bytes = bincode::serialize(ct).expect("Serialization failed");
+
+    // Return the raw Java array
+    env.byte_array_from_slice(&bytes)
+        .expect("Failed to create jbyteArray")
+        .as_raw()
+}
+
+
 
 
 

@@ -30,6 +30,17 @@ class EncryptedInt(private val bits: List<EncryptedBool>) {
             .sum()
     }
 
+    fun equals(value: Int): EncryptedBool {
+        val bitsToMatch = fromInt(value).bits
+        require(bits.size == bitsToMatch.size) { "Bit widths must match" }
+
+        val bitwiseEqual = bits.zip(bitsToMatch).map { (a, b) -> a.xor(b).not() }
+        return bitwiseEqual.reduce { acc, bit -> acc.and(bit) }
+    }
+
+    fun serialize(): List<ByteArray> =
+        bits.map { it.serialize() }
+
     override fun toString(): String = "🔒(${decrypt()})"
 
     companion object {
@@ -43,11 +54,5 @@ class EncryptedInt(private val bits: List<EncryptedBool>) {
         }
     }
 
-    fun equals(value: Int): EncryptedBool {
-        val bitsToMatch = fromInt(value).bits
-        require(bits.size == bitsToMatch.size) { "Bit widths must match" }
 
-        val bitwiseEqual = bits.zip(bitsToMatch).map { (a, b) -> a.xor(b).not() }
-        return bitwiseEqual.reduce { acc, bit -> acc.and(bit) }
-    }
 }
