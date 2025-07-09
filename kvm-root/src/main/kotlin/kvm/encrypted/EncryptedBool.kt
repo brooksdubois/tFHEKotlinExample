@@ -14,6 +14,11 @@ value class EncryptedBool(val ptr: EncPtr) {
     fun xor(other: EncryptedBool): EncryptedBool =
         EncryptedBool(TfheBridge.xor(ptr, other.ptr))
 
+    fun toInt(): EncryptedInt = EncryptedInt(listOf(this) + List(7) { fromBoolean(false) })
+
+    fun serialize(): ByteArray =
+        TfheBridge.serialize(ptr)
+
     override fun toString(): String = "🔒(${decrypt()})"
 
     companion object {
@@ -21,6 +26,5 @@ value class EncryptedBool(val ptr: EncPtr) {
             EncryptedBool(TfheBridge.encrypt(value))
     }
 
-    fun toInt(): EncryptedInt = EncryptedInt(listOf(this) + List(7) { fromBoolean(false) })
 
 }

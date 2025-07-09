@@ -4,6 +4,7 @@ import kvm.encrypted.EncryptedBool
 import kvm.native.TfheBridge
 import kvm.core.Blockchain
 import kvm.encrypted.EncryptedInt
+import kvm.encrypted.writeTallyToJson
 import kvm.instruction.KVEInstruction
 import kvm.model.SimpleRecord
 import java.time.Instant
@@ -49,18 +50,26 @@ fun main() {
     println("\nBlockchain contents:")
     blockchain.getChain().forEach { println(it) }
 
-    val voteRange = 0..3
-    val allVotes = blockchain.getChain().flatMap { it.records }.map { it.vote }
+    val encryptedVotes = blockchain.getChain()
+        .flatMap { it.records }
+        .map { it.vote }
 
-    val encryptedHistogram: Map<Int, EncryptedInt> = voteRange.associateWith { candidate ->
-        allVotes.map { vote ->
+    encryptedVotes.forEachIndexed { i, encVote ->
+        val serialized = encVote.serialize()
+        println("🗃️ Encrypted vote [$i]: ${serialized.joinToString { it.joinToString(",") }}")
+    }
+
+    val histogram: Map<Int, EncryptedInt> = (0..3).associateWith { candidate ->
+        encryptedVotes.map { vote ->
             vote.equals(candidate).toInt()
-        }.reduce { acc, bitAsInt -> acc.add(bitAsInt) }
+        }.reduce { acc, e -> acc.add(e) }
     }
 
-    println("\n📊 Homomorphic vote tally:")
-    encryptedHistogram.forEach { (candidate, count) ->
-        println("Candidate $candidate: ${count.decrypt()} votes")
+    histogram.forEach { (candidate, encCount) ->
+        println("Candidate $candidate tally: 🔒 ${encCount.serialize()}")
     }
+
+    writeTallyToJson(histogram, "encrypted_tally.json")
+    println("📤 Encrypted tally written to encrypted_tally.json")
 }
 

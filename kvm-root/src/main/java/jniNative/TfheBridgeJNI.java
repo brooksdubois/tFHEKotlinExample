@@ -23,4 +23,6 @@ public class TfheBridgeJNI {
 
     // Debugging
     public static native long echo_ptr(long ptr);
+
+    public static native byte[] serialize_ciphertext(long ptr);
 }

@@ -27,4 +27,7 @@ object TfheBridge {
 
     fun echo(ptr: EncPtr): EncPtr =
         EncPtr(TfheBridgeJNI.echo_ptr(ptr.raw))
+
+    fun serialize(ptr: EncPtr): ByteArray =
+        TfheBridgeJNI.serialize_ciphertext(ptr.raw)
 }
