@@ -39,10 +39,10 @@ class KVE {
         return records.all { validateWithContract(it, contract) }
     }
 
-    fun tallyVotes(records: List<SimpleRecord>): EncryptedInt {
-        return records.map { it.vote }
-            .reduce { acc, vote -> acc.add(vote.decrypt()) } // simulate homomorphic sum
-    }
+//    fun tallyVotes(records: List<SimpleRecord>): EncryptedInt {
+//        return records.map { it.vote }
+//            .reduce { acc, vote -> acc.add(vote.decrypt()) } // simulate homomorphic sum
+//    }
 
     // New: evaluate a list of instructions as a "contract"
     fun validateWithContract(record: SimpleRecord, instructions: List<KVEInstruction>): Boolean {

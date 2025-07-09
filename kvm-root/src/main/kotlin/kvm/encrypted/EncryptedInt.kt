@@ -1,20 +1,22 @@
 package kvm.encrypted
 
-class EncryptedInt(private val plaintext: Int) {
+class EncryptedInt(private val enc: EncryptedBool) {
+    fun add(other: EncryptedInt): EncryptedInt =
+        EncryptedInt(enc.or(other.enc)) // boolean addition (OR for now, placeholder)
+
     fun greaterThan(value: Int): EncryptedBool {
-        return EncryptedBool(plaintext > value)
+        return when (value) {
+            0 -> enc // 1 > 0 → true, 0 > 0 → false
+            else -> EncryptedBool.fromBoolean(false)
+        }
     }
 
-    fun lessThan(value: Int): EncryptedBool {
-        return EncryptedBool(plaintext < value)
+    fun decrypt(): Int = if (enc.decrypt()) 1 else 0
+
+    override fun toString(): String = "🔒(${decrypt()})"
+
+    companion object {
+        fun fromInt(value: Int): EncryptedInt =
+            EncryptedInt(EncryptedBool.fromBoolean(value != 0))
     }
-
-    fun add(value: Int): EncryptedInt {
-        return EncryptedInt(plaintext + value)
-    }
-
-    fun decrypt(): Int = plaintext
-
-    override fun toString(): String = "🔒(${plaintext})" // good for debug
-
 }
