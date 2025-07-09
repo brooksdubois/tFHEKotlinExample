@@ -3,6 +3,7 @@ use std::sync::OnceLock;
 use jni::JNIEnv;
 use jni::objects::{JClass, JByteArray};
 use jni::sys::{jbyteArray, jlong, jboolean};
+use tfhe::core_crypto::entities::{LweCiphertext, LweSecretKey};
 
 // Global TFHE keys
 static CLIENT_KEY: OnceLock<ClientKey> = OnceLock::new();
@@ -102,3 +103,22 @@ pub extern "C" fn Java_jniNative_TfheBridgeJNI_echo_1ptr(
     println!("🔁 echo_ptr received = {}", ptr);
     ptr
 }
+
+#[no_mangle]
+pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1xor(
+    _env: JNIEnv,
+    _class: JClass,
+    a: jlong,
+    b: jlong,
+) -> jlong {
+    println!("🔐 tfhe_xor called with a={}, b={}", a, b);
+    let key = SERVER_KEY.get().expect("Server key not initialized");
+    assert!(a != 0 && b != 0, "Null pointer passed to xor");
+    let a = unsafe { &*(a as *mut Ciphertext) };
+    let b = unsafe { &*(b as *mut Ciphertext) };
+    let ct = key.xor(a, b);
+    Box::into_raw(Box::new(ct)) as jlong
+}
+
+
+

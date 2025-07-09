@@ -16,6 +16,7 @@ public class TfheBridgeJNI {
     public static native long tfhe_and(long a, long b);
     public static native long tfhe_or(long a, long b);
     public static native long tfhe_not(long ptr);
+    public static native long tfhe_xor(long a, long b);
 
     // Decryption
     public static native boolean tfhe_decrypt_bit(long ptr);
