@@ -22,6 +22,9 @@ object TfheBridge {
     fun not(ptr: EncPtr): EncPtr =
         EncPtr(TfheBridgeJNI.tfhe_not(ptr.raw))
 
+    fun xor(a: EncPtr, b: EncPtr): EncPtr =
+        EncPtr(TfheBridgeJNI.tfhe_xor(a.raw, b.raw))
+
     fun echo(ptr: EncPtr): EncPtr =
         EncPtr(TfheBridgeJNI.echo_ptr(ptr.raw))
 }
