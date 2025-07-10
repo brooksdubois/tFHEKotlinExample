@@ -25,6 +25,4 @@ value class EncryptedBool(val ptr: EncPtr) {
         fun fromBoolean(value: Boolean): EncryptedBool =
             EncryptedBool(TfheBridge.encrypt(value))
     }
-
-
 }

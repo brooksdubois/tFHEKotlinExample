@@ -1,20 +1,14 @@
 package kvm.core
 
-import kvm.encrypted.EncryptedInt
 import kvm.model.SimpleRecord
 import kvm.instruction.KVEInstruction
 
 class KVE {
 
-    // Original simple validation (still usable)
-    fun validateRecord(record: SimpleRecord): Int {
-        return record.vote.decrypt() // eventually encrypted contract logic
-    }
-
     fun execute(instruction: KVEInstruction, record: SimpleRecord): Boolean {
         return when (instruction) {
             is KVEInstruction.VoteEquals -> {
-                val actual = record.vote.decrypt() != 0
+                val actual = record.userEncryptedVote.decrypt() != 0
                 println("🔎 Executing VoteEquals: expected=${instruction.expected}, actual=$actual")
                 actual == instruction.expected
             }
@@ -22,7 +16,7 @@ class KVE {
                 record.address == instruction.expected
             }
             is KVEInstruction.VoteEqualsInt -> {
-                val actual = record.vote.decrypt()
+                val actual = record.userEncryptedVote.decrypt()
                 println("🔎 Executing VoteEqualsInt: expected=${instruction.expected}, actual=$actual")
                 actual == instruction.expected
             }

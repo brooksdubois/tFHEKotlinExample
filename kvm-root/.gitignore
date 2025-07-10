@@ -17,6 +17,7 @@ out/
 
 # === Rust (cargo) ===
 /kvm-blockchain/target/
+/kvm-blockchain/tfhe-bridge/target/debug/
 /kvm-blockchain/Cargo.lock
 
 # If you use Cargo outside of kvm-blockchain, adjust paths:
@@ -34,5 +35,5 @@ Thumbs.db
 
 # === Kotlin serialization ===
 *.json
-client.key
+*.key
 encrypted_tally.json
