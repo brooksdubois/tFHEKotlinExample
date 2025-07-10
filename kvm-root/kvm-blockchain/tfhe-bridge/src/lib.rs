@@ -4,9 +4,9 @@ use jni::JNIEnv;
 use jni::objects::{JClass, JByteArray};
 use jni::sys::{jbyteArray, jlong, jboolean};
 
-// Global TFHE keys
 static CLIENT_KEY: OnceLock<ClientKey> = OnceLock::new();
 static SERVER_KEY: OnceLock<ServerKey> = OnceLock::new();
+static CLOUD_KEY: OnceLock<ServerKey> = OnceLock::new(); // for exportable cloud key
 
 #[no_mangle]
 pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1init_1keys(
@@ -15,8 +15,11 @@ pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1init_1keys(
 ) {
     println!("🔐 tfhe_init_keys called");
     let (client_key, server_key) = gen_keys();
+    let cloud_key = server_key.clone(); // ✅ clone while you still have it
+
     let _ = CLIENT_KEY.set(client_key);
     let _ = SERVER_KEY.set(server_key);
+    let _ = CLOUD_KEY.set(cloud_key); // also populate cloud key for export
 }
 
 #[no_mangle]
@@ -38,7 +41,6 @@ pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1encrypt_1byte(
     Box::into_raw(Box::new(ct)) as jlong
 }
 
-
 #[no_mangle]
 pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1decrypt_1bit(
     _env: JNIEnv,
@@ -58,7 +60,6 @@ pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1and(
     a: jlong,
     b: jlong,
 ) -> jlong {
-    println!("🔐 tfhe_and called with a={}, b={}", a, b);
     let key = SERVER_KEY.get().expect("Server key not initialized");
     assert!(a != 0 && b != 0, "Null pointer passed to and");
     let a = unsafe { &*(a as *mut Ciphertext) };
@@ -94,6 +95,21 @@ pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1not(
 }
 
 #[no_mangle]
+pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1xor(
+    _env: JNIEnv,
+    _class: JClass,
+    a: jlong,
+    b: jlong,
+) -> jlong {
+    let key = SERVER_KEY.get().expect("Server key not initialized");
+    assert!(a != 0 && b != 0, "Null pointer passed to xor");
+    let a = unsafe { &*(a as *mut Ciphertext) };
+    let b = unsafe { &*(b as *mut Ciphertext) };
+    let ct = key.xor(a, b);
+    Box::into_raw(Box::new(ct)) as jlong
+}
+
+#[no_mangle]
 pub extern "C" fn Java_jniNative_TfheBridgeJNI_echo_1ptr(
     _env: JNIEnv,
     _class: JClass,
@@ -104,22 +120,6 @@ pub extern "C" fn Java_jniNative_TfheBridgeJNI_echo_1ptr(
 }
 
 #[no_mangle]
-pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1xor(
-    _env: JNIEnv,
-    _class: JClass,
-    a: jlong,
-    b: jlong,
-) -> jlong {
-    println!("🔐 tfhe_xor called with a={}, b={}", a, b);
-    let key = SERVER_KEY.get().expect("Server key not initialized");
-    assert!(a != 0 && b != 0, "Null pointer passed to xor");
-    let a = unsafe { &*(a as *mut Ciphertext) };
-    let b = unsafe { &*(b as *mut Ciphertext) };
-    let ct = key.xor(a, b);
-    Box::into_raw(Box::new(ct)) as jlong
-}
-
-#[no_mangle]
 pub extern "C" fn Java_jniNative_TfheBridgeJNI_serialize_1ciphertext(
     env: JNIEnv,
     _class: JClass,
@@ -127,11 +127,7 @@ pub extern "C" fn Java_jniNative_TfheBridgeJNI_serialize_1ciphertext(
 ) -> jbyteArray {
     let ct = unsafe { &*(ptr as *const Ciphertext) };
     let bytes = bincode::serialize(ct).expect("Serialization failed");
-
-    // Return the raw Java array
-    env.byte_array_from_slice(&bytes)
-        .expect("Failed to create jbyteArray")
-        .as_raw()
+    env.byte_array_from_slice(&bytes).expect("jbyteArray conversion failed").as_raw()
 }
 
 #[no_mangle]
@@ -167,6 +163,24 @@ pub extern "C" fn Java_jniNative_TfheBridgeJNI_import_1client_1key(
     let _ = CLIENT_KEY.set(key);
 }
 
+#[no_mangle]
+pub extern "system" fn Java_jniNative_TfheBridgeJNI_export_1cloud_1key(
+    env: JNIEnv,
+    _class: JClass,
+) -> jbyteArray {
+    let key = CLOUD_KEY.get().expect("Cloud key not initialized");
+    let serialized = bincode::serialize(key).expect("Serialization failed");
+    env.byte_array_from_slice(&serialized).expect("Failed to convert cloud key to jbyteArray").as_raw()
+}
 
-
-
+#[no_mangle]
+pub extern "C" fn Java_jniNative_TfheBridgeJNI_import_1cloud_1key(
+    env: JNIEnv,
+    _class: JClass,
+    input: JByteArray,
+) {
+    let bytes = env.convert_byte_array(input).expect("Invalid byte array");
+    let key: ServerKey = bincode::deserialize(&bytes).expect("Failed to deserialize ServerKey");
+    let _ = CLOUD_KEY.set(key.clone());
+    let _ = SERVER_KEY.set(key); // Optional: set for logic reuse if needed
+}
