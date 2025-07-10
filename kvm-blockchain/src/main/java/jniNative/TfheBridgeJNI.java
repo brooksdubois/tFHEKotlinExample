@@ -31,4 +31,7 @@ public class TfheBridgeJNI {
     public static native byte[] export_client_key();
     public static native void import_client_key(byte[] keyBytes);
 
+    public static native byte[] export_cloud_key();
+    public static native void import_cloud_key(byte[] key);
+
 }

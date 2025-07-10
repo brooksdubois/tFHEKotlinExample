@@ -40,4 +40,11 @@ object TfheBridge {
     fun importClientKey(bytes: ByteArray) =
         TfheBridgeJNI.import_client_key(bytes)
 
+    fun exportCloudKey(): ByteArray =
+        TfheBridgeJNI.export_cloud_key()
+
+    fun importCloudKey(bytes: ByteArray) {
+        TfheBridgeJNI.import_cloud_key(bytes)
+    }
+
 }
