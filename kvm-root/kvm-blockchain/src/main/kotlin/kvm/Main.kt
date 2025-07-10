@@ -7,7 +7,6 @@ import java.time.Instant
 import java.util.Base64
 import kvm.core.Blockchain
 import kvm.encrypted.EncryptedInt
-import kvm.encrypted.writeTallyToJson
 import kvm.instruction.KVEInstruction
 import kvm.model.PublicUserVote
 import kvm.model.SimpleRecord
@@ -104,9 +103,6 @@ fun main() {
     histogram.forEach { (candidate, encCount) ->
         println("Candidate $candidate tally: 🔒 ${encCount.serialize()}")
     }
-
-    writeTallyToJson(histogram, "../verifier/encrypted_tally.json")
-    println("📤 Encrypted tally written to encrypted_tally.json")
 }
 
 fun writeUserVotesToJson(records: List<SimpleRecord>, outputFile: String) {
