@@ -1,15 +1,12 @@
 package kvm
 
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.encodeToString
 import java.io.File
 import java.time.Instant
-import java.util.Base64
 import kvm.core.Blockchain
 import kvm.encrypted.EncryptedInt
 import kvm.instruction.KVEInstruction
-import kvm.model.PublicUserVote
 import kvm.model.SimpleRecord
+import kvm.model.writeUserVotesToJson
 import kvm.native.TfheBridge
 
 data class Voter(val id: String, val name: String, val address: String, val age: Int, val voteValue: Int)
@@ -103,18 +100,4 @@ fun main() {
     histogram.forEach { (candidate, encCount) ->
         println("Candidate $candidate tally: 🔒 ${encCount.serialize()}")
     }
-}
-
-fun writeUserVotesToJson(records: List<SimpleRecord>, outputFile: String) {
-    val base64 = Base64.getEncoder()
-    val votes = records.map { record ->
-        PublicUserVote(
-            id = record.id,
-            name = record.name,
-            userEncryptedVote = record.userEncryptedVote.serialize().map { base64.encodeToString(it) }
-        )
-    }
-
-    val json = Json { prettyPrint = true }
-    File(outputFile).writeText(json.encodeToString(votes))
 }
