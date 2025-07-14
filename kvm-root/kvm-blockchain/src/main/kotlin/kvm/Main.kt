@@ -31,8 +31,8 @@ fun main() {
     // === 2. Define voters ===
     val voters = listOf(
         Voter("abc123", "Alice", "123 Main St", 30, 3),
-        Voter("def456", "Bob", "456 Elm St", 22, 2),
-        Voter("ghi789", "Carol", "789 Oak Ave", 28, 1)
+        Voter("def456", "Bob", "456 Elm St", 22, 3),
+        Voter("ghi789", "Carol", "789 Oak Ave", 28, 1),
     )
 
     val records = voters.map { voter ->
