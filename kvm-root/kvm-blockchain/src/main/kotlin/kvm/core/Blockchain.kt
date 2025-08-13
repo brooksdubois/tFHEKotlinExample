@@ -1,8 +1,10 @@
 package kvm.core
 
+import KVE
 import kvm.instruction.KVEInstruction
 import kvm.model.Block
 import kvm.model.SimpleRecord
+import kvm.native.Keypair
 import java.time.Instant
 import java.security.MessageDigest
 
@@ -20,9 +22,19 @@ class Blockchain {
         return genesis
     }
 
-    fun addBlock(records: List<SimpleRecord>, contract: List<KVEInstruction>): Block {
+    fun addBlock(records: List<SimpleRecord>, contract: List<KVEInstruction>, key: Keypair): Block {
         val kve = KVE()
-        val validRecords = records.filter { kve.validateWithContract(it, contract) }
+        val validRecords = records.filter { kve.validateWithContract(it, contract, key) }
+
+        val commitments = validRecords.map { it.commitment }
+        if (commitments.size != commitments.toSet().size) {
+            throw IllegalArgumentException("Duplicate commitments detected")
+        }
+
+        val existingCommitments = chain.flatMap { it.records }.map { it.commitment }.toSet()
+        if (validRecords.any { it.commitment in existingCommitments }) {
+            throw IllegalArgumentException("Duplicate vote detected (existing commitment)")
+        }
 
         if (validRecords.isEmpty()) {
             throw IllegalArgumentException("No valid records to add")
@@ -37,7 +49,6 @@ class Blockchain {
         chain.add(newBlock)
         return newBlock
     }
-
 
     private fun createBlock(index: Int, previousHash: String, records: List<SimpleRecord>): Block {
         val timestamp = Instant.now().epochSecond

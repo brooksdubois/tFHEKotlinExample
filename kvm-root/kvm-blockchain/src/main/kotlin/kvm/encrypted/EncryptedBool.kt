@@ -1,28 +1,37 @@
 package kvm.encrypted
 
 import kvm.native.EncPtr
+import kvm.native.Keypair
 import kvm.native.TfheBridge
-import kvm.native.xor
 
 @JvmInline
 value class EncryptedBool(val ptr: EncPtr) {
-    fun not(): EncryptedBool = EncryptedBool(TfheBridge.not(ptr))
-    fun and(other: EncryptedBool): EncryptedBool = EncryptedBool(TfheBridge.and(ptr, other.ptr))
-    fun or(other: EncryptedBool): EncryptedBool = EncryptedBool(TfheBridge.or(ptr, other.ptr))
-    fun decrypt(): Boolean = TfheBridge.decrypt(ptr)
 
-    fun xor(other: EncryptedBool): EncryptedBool =
-        EncryptedBool(TfheBridge.xor(ptr, other.ptr))
+    fun not(key: Keypair): EncryptedBool =
+        EncryptedBool(TfheBridge.not(ptr, key))
 
-    fun toInt(): EncryptedInt = EncryptedInt(listOf(this) + List(7) { fromBoolean(false) })
+    fun and(other: EncryptedBool, key: Keypair): EncryptedBool =
+        EncryptedBool(TfheBridge.and(ptr, other.ptr, key))
+
+    fun or(other: EncryptedBool, key: Keypair): EncryptedBool =
+        EncryptedBool(TfheBridge.or(ptr, other.ptr, key))
+
+    fun xor(other: EncryptedBool, key: Keypair): EncryptedBool =
+        EncryptedBool(TfheBridge.xor(ptr, other.ptr, key))
+
+    fun decrypt(key: Keypair): Boolean =
+        TfheBridge.decrypt(ptr, key)
+
+    fun toInt(key: Keypair): EncryptedInt =
+        EncryptedInt(listOf(this) + List(7) { fromBoolean(false, key) })
 
     fun serialize(): ByteArray =
         TfheBridge.serialize(ptr)
 
-    override fun toString(): String = "🔒(${decrypt()})"
+    override fun toString(): String = "🔒(?)" // don't auto-decrypt in toString
 
     companion object {
-        fun fromBoolean(value: Boolean): EncryptedBool =
-            EncryptedBool(TfheBridge.encrypt(value))
+        fun fromBoolean(value: Boolean, key: Keypair): EncryptedBool =
+            EncryptedBool(TfheBridge.encrypt(value, key))
     }
 }

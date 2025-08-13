@@ -7,7 +7,8 @@ data class SimpleRecord(
     val name: String,
     val address: String,
     val age: Int,
-    val userEncryptedVote: EncryptedInt,   // private to user
-    val tallyEncryptedVote: EncryptedInt,  // public for homomorphic tally
-    val timestamp: Long
+    val vote: EncryptedInt,                   // for tally (global key)
+    val userEncryptedVote: List<ByteArray>,   // raw bytes from per-user encryption
+    val timestamp: Long,
+    val commitment: String
 )

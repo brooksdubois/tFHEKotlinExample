@@ -19,7 +19,7 @@ To build it, you will first need to compile the Zama library for your system. In
 ```bash
 cd ./kvm-blockchain/tfhe-bridge
 cargo clean && cargo build --release
-cp ./target/release/libtfhe_bridge.dylib ./libs/libtfhe_bridge.dylib 
+cp ./target/release/libtfhe_bridge.dylib ../libs/libtfhe_bridge.dylib 
 ```
 
 Since mac requires the `.dylib` file for Rust to work with JNI, this worked on my machine. Your compilation may require tweaking depending on your OS.

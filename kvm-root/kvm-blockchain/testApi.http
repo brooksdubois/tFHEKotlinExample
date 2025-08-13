@@ -1,0 +1,56 @@
+@base = http://localhost:8080
+@json = application/json
+
+### 0) Health
+GET {{base}}/
+
+### 1) Submit vote: Alice → candidate 3
+POST {{base}}/vote
+Content-Type: {{json}}
+
+{
+  "id": "abc123",
+  "name": "Alice",
+  "address": "123 Main St",
+  "age": 30,
+  "vote": 3
+}
+
+### 2) Submit vote: Bob → candidate 3
+POST {{base}}/vote
+Content-Type: {{json}}
+
+{
+  "id": "def456",
+  "name": "Bob",
+  "address": "456 Elm St",
+  "age": 22,
+  "vote": 3
+}
+
+### 3) Submit vote: Carol → candidate 1
+POST {{base}}/vote
+Content-Type: {{json}}
+
+{
+  "id": "ghi789",
+  "name": "Carol",
+  "address": "789 Oak Ave",
+  "age": 28,
+  "vote": 1
+}
+
+### 4) Get tally (MPC local aggregate)
+GET {{base}}/tally
+
+### 5) Inspect party share file (party 0)
+GET {{base}}/mpc/party/0
+
+### 6) Chain dump (debug)
+GET {{base}}/chain
+
+### (Optional) CORS preflight check for /vote
+OPTIONS {{base}}/vote
+Origin: http://localhost:3000
+Access-Control-Request-Method: POST
+Access-Control-Request-Headers: content-type
