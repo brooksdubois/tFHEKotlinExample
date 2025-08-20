@@ -1,6 +1,7 @@
 package server
 
 import io.ktor.http.*
+import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
@@ -84,7 +85,19 @@ fun Application.module() {
     }
     install(ContentNegotiation) { json() }
 
+    install(StatusPages) {
+        exception<IllegalArgumentException> { call, cause ->
+            call.respond(HttpStatusCode.Conflict, mapOf("error" to cause.message))
+        }
+        exception<Throwable> { call, cause ->
+            // last-resort safety
+            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "server error"))
+            throw cause  // or log it
+        }
+    }
+
     resetMpcFiles(State.mpcDir, NUM_PARTIES) // dev: clear previous shares
+
 
     routing {
         get("/") { call.respond(mapOf("ok" to true)) }
@@ -97,20 +110,29 @@ fun Application.module() {
             val userKey = TfheBridge.generateKeypair()
             val clientKeyB64 = Base64.getEncoder().encodeToString(userKey.exportClientKey())
 
+            // TFHE receipt (user-only decrypt)
             val userEncrypted = EncryptedInt.fromInt(v.vote, userKey)
             val receiptBitsB64 = userEncrypted.serialize().map { Base64.getEncoder().encodeToString(it) }
 
-            val shares = additiveShares(oneHot(v.vote, NUM_CANDIDATES), NUM_PARTIES)
-            shares.forEachIndexed { partyId, shareVec -> appendShareRow(State.mpcDir, partyId, v.id, shareVec) }
-
             val cmt = commitment(v.id, "election2025")
+
+            // Build record first
             val rec = SimpleRecord(
                 id = v.id, name = v.name, address = v.address, age = v.age,
                 vote = userEncrypted, userEncryptedVote = userEncrypted.serialize(),
                 timestamp = now, commitment = cmt
             )
+
+            // ✅ Try to add block BEFORE writing shares
             State.chain.addBlock(listOf(rec), emptyList(), TfheBridge.generateKeypair())
 
+            // ⬇️ Only after success, create and append shares
+            val shares = additiveShares(oneHot(v.vote, NUM_CANDIDATES), NUM_PARTIES)
+            shares.forEachIndexed { partyId, shareVec ->
+                appendShareRow(State.mpcDir, partyId, v.id, shareVec)
+            }
+
+            // Rewrite user receipts export (optional, but do it after accept)
             val all = State.chain.getChain().flatMap { it.records }
             writeUserVotesJson(all, File(State.publicDir, "encrypted_user_votes.json").path)
 
