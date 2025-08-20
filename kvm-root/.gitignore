@@ -17,7 +17,7 @@ out/
 
 # === Rust (cargo) ===
 /kvm-blockchain/target/
-/kvm-blockchain/tfhe-bridge/target/debug/
+/kvm-blockchain/tfhe-bridge/target/
 /kvm-blockchain/Cargo.lock
 
 verifier/mpc/
