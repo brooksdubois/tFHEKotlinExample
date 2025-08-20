@@ -6,6 +6,13 @@ out/
 *.iml
 *.ipr
 *.iws
+kvm-blockchain/gradle/wrapper/gradle-wrapper.jar
+kvm-blockchain/gradle/wrapper/gradle-wrapper.properties
+kvm-blockchain/gradlew
+kvm-blockchain/gradlew.bat
+gradlew
+gradlew.bat
+
 
 # === Kotlin/JVM Caches ===
 *.class
