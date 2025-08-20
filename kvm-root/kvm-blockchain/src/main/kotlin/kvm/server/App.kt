@@ -139,6 +139,18 @@ fun Application.module() {
             call.respond(ReceiptOut(v.id, cmt, clientKeyB64, receiptBitsB64))
         }
 
+        get("/user-votes") {
+            val base64 = Base64.getEncoder()
+            val votes: List<List<String>> =
+                State.chain.getChain()
+                    .flatMap { it.records }
+                    .map { rec -> rec.userEncryptedVote.map { base64.encodeToString(it) } }
+
+            // Returns: [[bitB64, bitB64, ...], [bitB64, ...], ...]
+            // No metadata included.
+            call.respond(votes)
+        }
+
         get("/tally") {
             val totals = localAggregate(State.mpcDir, NUM_PARTIES, NUM_CANDIDATES)
             call.respond(TallyOut((0 until NUM_CANDIDATES).associateWith { totals[it] }))
