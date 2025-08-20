@@ -61,8 +61,10 @@ public class TfheBridgeJNI {
                     : "libtfhe_bridge.so";
 
             java.io.File userDir = new java.io.File(System.getProperty("user.dir"));
+
             java.io.File[] dirs = new java.io.File[] {
-                    new java.io.File(userDir, "libs"),               // ./libs (your case)
+                    new java.io.File(userDir, "libs"),
+                    new java.io.File(userDir + "/kvm-blockchain", "libs"),   // ./libs (your case
                     userDir,                                         // .
                     userDir.getParentFile() == null ? null : new java.io.File(userDir.getParentFile(), "libs"),     // ../libs
                     userDir.getParentFile() == null || userDir.getParentFile().getParentFile() == null

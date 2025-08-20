@@ -13,7 +13,7 @@ class Keypair(val ptr: Long) {
 }
 
 object TfheBridge {
-    init { kvm.native.NativeLoader.load() }
+    init { NativeLoader.load() }
 
     fun generateKeypair(): Keypair =
         Keypair(TfheBridgeJNI.tfhe_generate_keys())
