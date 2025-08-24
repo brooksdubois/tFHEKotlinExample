@@ -1,13 +1,10 @@
-use tfhe::boolean::prelude::*;
 use jni::JNIEnv;
 use jni::objects::{JByteArray, JClass};
-use jni::sys::{jbyteArray, jboolean, jlong, jbyte, jint};
-use tfhe::{ConfigBuilder, generate_keys, with_server_key_as_context, FheUint16};
+use jni::sys::{jbyteArray, jlong, jint};
+use tfhe::{ConfigBuilder, generate_keys, with_server_key_as_context, FheUint16, ClientKey};
 use tfhe::{CompressedServerKey};
 use tfhe::prelude::{FheDecrypt, FheEncrypt};
 use tfhe::ServerKey;
-
-// compressed at rest
 
 #[repr(C)]
 pub struct Keypair {
@@ -15,55 +12,58 @@ pub struct Keypair {
     pub server: ServerKey,
 }
 
+// Just under IntKeypair, add a server-only holder:
+#[repr(C)]
+pub struct IntServerCtx {
+    server: tfhe::ServerKey,
+}
 
+// Build server-only ctx from a compressed server key (bytes).
 #[no_mangle]
-pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1encrypt_1with(
-    _env: JNIEnv,
-    _class: JClass,
-    key_ptr: jlong,
-    input: jbyte,
+pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1int_1serverCtxFromCompressed(
+    env: JNIEnv, _cls: JClass, input: JByteArray,
 ) -> jlong {
-    let key = unsafe { &*(key_ptr as *mut Keypair) };
-    let bit = input != 0;
-    let ct = key.client.encrypt(bit);
-    Box::into_raw(Box::new(ct)) as jlong
+    let bytes = env.convert_byte_array(input).expect("invalid bytes");
+    let csk: CompressedServerKey = bincode::deserialize(&bytes).expect("deserialize csk");
+    let server = csk.decompress();
+    Box::into_raw(Box::new(IntServerCtx { server })) as jlong
+}
+
+// Homomorphic add using server-only ctx (no global set).
+#[no_mangle]
+pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1int_1addWithServer(
+    _env: JNIEnv, _cls: JClass, srv_ptr: jlong, a_ptr: jlong, b_ptr: jlong,
+) -> jlong {
+    let srv = jlong_as_ref::<IntServerCtx>(srv_ptr, "null server ctx");
+    let a   = jlong_as_ref::<FheUint16>(a_ptr, "null a");
+    let b   = jlong_as_ref::<FheUint16>(b_ptr, "null b");
+    let out = with_server_key_as_context(srv.server.clone(), || a + b);
+    Box::into_raw(Box::new(out)) as jlong
+}
+
+// Optional but recommended frees (mirror your Java JNI signatures):
+#[no_mangle]
+pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1int_1freeKeypair(
+    _env: JNIEnv, _cls: JClass, kp_ptr: jlong,
+) {
+    if kp_ptr != 0 { unsafe { drop(Box::from_raw(kp_ptr as *mut IntKeypair)); } }
 }
 
 #[no_mangle]
-pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1decrypt_1with(
-    _env: JNIEnv,
-    _class: JClass,
-    key_ptr: jlong,
-    ct_ptr: jlong,
-) -> jbyte {
-    let key = unsafe { &*(key_ptr as *mut Keypair) };
-    let ct = unsafe { &*(ct_ptr as *mut Ciphertext) };
-    key.client.decrypt(ct) as jbyte
+pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1int_1freeCiphertext(
+    _env: JNIEnv, _cls: JClass, ct_ptr: jlong,
+) {
+    if ct_ptr != 0 { unsafe { drop(Box::from_raw(ct_ptr as *mut FheUint16)); } }
 }
 
 #[no_mangle]
-pub extern "C" fn Java_jniNative_TfheBridgeJNI_serialize_1ciphertext(
-    env: JNIEnv,
-    _class: JClass,
-    ct_ptr: jlong,
-) -> jbyteArray {
-    let ct = unsafe { &*(ct_ptr as *mut Ciphertext) };
-    let bytes = bincode::serialize(ct).expect("Serialization failed");
-    env.byte_array_from_slice(&bytes).expect("Failed to create jbyteArray").as_raw()
+pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1int_1freeServerCtx(
+    _env: JNIEnv, _cls: JClass, srv_ptr: jlong,
+) {
+    if srv_ptr != 0 { unsafe { drop(Box::from_raw(srv_ptr as *mut IntServerCtx)); } }
 }
 
-#[no_mangle]
-pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1decrypt_1serialized_1with(
-    env: JNIEnv,
-    _class: JClass,
-    key_ptr: jlong,
-    input: JByteArray,
-) -> jboolean {
-    let key = unsafe { &*(key_ptr as *mut Keypair) };
-    let bytes = env.convert_byte_array(input).expect("Invalid byte array");
-    let ct: Ciphertext = bincode::deserialize(&bytes).expect("Deserialization failed");
-    key.client.decrypt(&ct) as u8
-}
+
 
 #[no_mangle]
 pub extern "C" fn Java_jniNative_TfheBridgeJNI_echo_1ptr(
@@ -84,37 +84,6 @@ pub extern "C" fn Java_jniNative_TfheBridgeJNI_export_1cloud_1key(
     let key = unsafe { &*(key_ptr as *mut Keypair) };
     let bytes = bincode::serialize(&key.server).expect("ServerKey serialization failed");
     env.byte_array_from_slice(&bytes).expect("jbyteArray conversion failed").as_raw()
-}
-
-#[no_mangle]
-pub extern "C" fn Java_jniNative_TfheBridgeJNI_import_1cloud_1key(
-    env: JNIEnv,
-    _class: JClass,
-    input: JByteArray,
-) -> jlong {
-    let bytes = env.convert_byte_array(input).expect("Invalid byte array");
-    let server_key: ServerKey = bincode::deserialize(&bytes).expect("Failed to deserialize ServerKey");
-
-    // Generate a dummy client key by calling gen_keys()
-    let (client_key, _) = gen_keys();
-
-    let kp = Box::new(Keypair {
-        client: client_key,
-        server: server_key,
-    });
-
-    Box::into_raw(kp) as jlong
-}
-
-#[no_mangle]
-pub extern "C" fn Java_jniNative_TfheBridgeJNI_deserialize_1ciphertext(
-    env: JNIEnv,
-    _class: JClass,
-    input: JByteArray,
-) -> jlong {
-    let bytes = env.convert_byte_array(input).expect("Invalid byte array");
-    let ct: Ciphertext = bincode::deserialize(&bytes).expect("Failed to deserialize Ciphertext");
-    Box::into_raw(Box::new(ct)) as jlong
 }
 
 #[inline]
@@ -221,52 +190,6 @@ pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1int_1importCompressedServer
     Box::into_raw(Box::new(IntKeypair { client, server })) as jlong
 }
 
-#[repr(C)]
-pub struct IntServerCtx {
-    server: ServerKey,
-}
-
-// Build a server-only ctx directly from a CompressedServerKey blob
-#[no_mangle]
-pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1int_1serverCtxFromCompressed(
-    env: JNIEnv,
-    _cls: JClass,
-    input: JByteArray,
-) -> jlong {
-    let bytes = env.convert_byte_array(input).unwrap();
-    let csk: CompressedServerKey = bincode::deserialize(&bytes).expect("deserialize csk");
-    let server = csk.decompress();
-    Box::into_raw(Box::new(IntServerCtx { server })) as jlong
-}
-
-// Add using only the server ctx (no client anywhere here)
-#[no_mangle]
-pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1int_1addWithServer(
-    _env: JNIEnv,
-    _cls: JClass,
-    srv_ptr: jlong,
-    a_ptr: jlong,
-    b_ptr: jlong,
-) -> jlong {
-    let srv = jlong_as_ref::<IntServerCtx>(srv_ptr, "null IntServerCtx") ;
-    let a   = jlong_as_ref::<FheUint16>(a_ptr, "null ciphertext a") ;
-    let b   = jlong_as_ref::<FheUint16>(b_ptr, "null ciphertext b");
-
-    let out = with_server_key_as_context(srv.server.clone(), || a + b);
-    Box::into_raw(Box::new(out)) as jlong
-}
-
-// Free server ctx (optional)
-#[no_mangle]
-pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1int_1freeServerCtx(
-    _env: JNIEnv,
-    _cls: JClass,
-    ptr: jlong,
-) {
-    if ptr != 0 {
-        unsafe { drop(Box::from_raw(ptr as *mut IntServerCtx)) }
-    }
-}
 
 
 

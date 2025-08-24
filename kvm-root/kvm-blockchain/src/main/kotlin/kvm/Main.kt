@@ -1,7 +1,5 @@
 package kvm
 
-import java.io.File
-import java.security.MessageDigest
 import kvm.native.EncPtr
 import kvm.native.ServerCtx
 import kvm.native.U16

@@ -1,6 +1,5 @@
 package kvm.core
 
-import KVE
 import kvm.instruction.KVEInstruction
 import kvm.model.Block
 import kvm.model.SimpleRecord

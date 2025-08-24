@@ -1,4 +1,4 @@
-package server
+package kvm.server
 
 import io.ktor.http.*
 import io.ktor.server.plugins.statuspages.*
@@ -18,26 +18,36 @@ import java.time.Instant
 import java.util.Base64
 import kvm.core.Blockchain
 import kvm.model.SimpleRecord
-import kvm.native.TfheBridge
-import kvm.encrypted.EncryptedInt
-import kvm.encrypted.writeUserVotesJson
+import kvm.native.EncPtr
+import kvm.native.Keypair
 import kvm.native.NativeLoader
-import mpc.oneHot
-import mpc.additiveShares
-import mpc.appendShareRow
-import mpc.localAggregate
+import kvm.native.U16
 
 private const val NUM_CANDIDATES = 4
-private const val NUM_PARTIES = 3
+private fun oneHot(ix: Int, n: Int) = List(n) { if (it == ix) 1 else 0 }
+
+// Holds the chain and the election keys for u16
+private object State {
+    val chain = Blockchain().apply { mineGenesis() }  // chain exists here. :contentReference[oaicite:0]{index=0}
+    val publicDir = File("public").also { it.mkdirs() }
+
+    // Integer (u16) election keypair (in-memory)
+    val u16Keys = U16.generateKeypair()
+
+    // Compressed ServerKey (write once so verifier can fetch)
+    val compressedServerKey: ByteArray = U16.exportCompressedServerKey(u16Keys).also {
+        File(publicDir, "u16_server_key.bin").writeBytes(it)
+    }
+}
 
 @Serializable
-data class VoteIn(val id: String, val name: String, val address: String, val age: Int, val vote: Int)
-
-@Serializable
-data class ReceiptOut(val id: String, val commitment: String, val clientKeyB64: String, val receiptBitsB64: List<String>)
-
-@Serializable
-data class TallyOut(val counts: Map<Int, Int>)
+data class VoteIn(
+    val id: String,
+    val name: String,
+    val address: String,
+    val age: Int,
+    val candidate: Int
+)
 
 @Serializable
 data class RecordSummary(
@@ -58,12 +68,6 @@ data class BlockSummary(
 
 @Serializable
 data class ChainOut(val blocks: List<BlockSummary>)
-
-private object State {
-    val chain = Blockchain().apply { mineGenesis() }
-    val publicDir = File("public").also { it.mkdirs() }
-    val mpcDir = File("public/mpc").also { it.mkdirs() }
-}
 
 private fun resetMpcFiles(dir: File, parties: Int) {
     dir.mkdirs()
@@ -96,54 +100,57 @@ fun Application.module() {
         }
     }
 
-    resetMpcFiles(State.mpcDir, NUM_PARTIES) // dev: clear previous shares
-
-
     routing {
-        get("/") { call.respond(mapOf("ok" to true)) }
-
-        get("/user-votes") {
-            val base64 = Base64.getEncoder()
-            val votes: List<List<String>> =
-                State.chain.getChain()
-                    .flatMap { it.records }
-                    .map { rec -> rec.userEncryptedVote.map { base64.encodeToString(it) } }
-
-            // Returns: [[bitB64, bitB64, ...], [bitB64, ...], ...]
-            // No metadata included.
-            call.respond(votes)
+        // Publish compressed server key for the offline verifier
+        get("/server-key") {
+            call.respondBytes(State.compressedServerKey, ContentType.Application.OctetStream)
         }
 
-        get("/tally") {
-            val totals = localAggregate(State.mpcDir, NUM_PARTIES, NUM_CANDIDATES)
-            call.respond(TallyOut((0 until NUM_CANDIDATES).associateWith { totals[it] }))
-        }
+        // POST /vote → encrypt a one-hot vector (u16), store on chain
+        post("/vote") {
+            val body = call.receive<VoteIn>()
+            require(body.candidate in 0 until NUM_CANDIDATES) { "candidate out of range" }
 
-        get("/mpc/party/{id}") {
-            val id = call.parameters["id"]?.toIntOrNull() ?: return@get call.respondText("bad id")
-            val f = File(State.mpcDir, "party_${id}.jsonl")
-            if (!f.exists()) return@get call.respondText("not found")
-            call.respondFile(f)
-        }
-
-        get("/chain") {
-            val blocks = State.chain.getChain().map { b ->
-                BlockSummary(
-                    index = b.index,
-                    recordCount = b.records.size,
-                    records = b.records.map { r ->
-                        RecordSummary(
-                            id = r.id,
-                            name = r.name,
-                            address = r.address,
-                            age = r.age,
-                            timestamp = r.timestamp,
-                            commitment = r.commitment
-                        )
-                    }
-                )
+            // Build one-hot and encrypt each position as a u16 (0 or 1)
+            val bits = oneHot(body.candidate, NUM_CANDIDATES)
+            val enc: List<ByteArray> = bits.map { bit ->
+                val ct: EncPtr = U16.encrypt(bit, State.u16Keys)
+                U16.serialize(ct)
             }
-            call.respond(ChainOut(blocks))
+
+            val rec = SimpleRecord(
+                id = body.id,
+                name = body.name,
+                address = body.address,
+                age = body.age,
+                timestamp = Instant.now().epochSecond,
+                commitment = "${body.id}|election-1",
+                u16OneHot = enc
+            )
+
+            // Chain has addBlock(records, contract, key). We pass no contract checks and a dummy key.
+            State.chain.addBlock(
+                records = listOf(rec),
+                contract = emptyList(),                 // no KVE checks for now
+                key = Keypair(0L)                      // never used since contract is empty
+            )                                          // API shown here. :contentReference[oaicite:1]{index=1}
+
+            call.respond(HttpStatusCode.OK, mapOf(
+                "ok" to true,
+                "candidate" to body.candidate,
+                "recordId" to body.id
+            ))
+        }
+
+        // Verifier feed: all ballots as base64 u16 ciphertexts (one-hot per record)
+        get("/user-votes") {
+            val b64 = Base64.getEncoder()
+            val votes: List<List<String>> =
+                State.chain.getChain()                 // current chain API. :contentReference[oaicite:2]{index=2}
+                    .flatMap { it.records }
+                    .map { rec -> rec.u16OneHot.map { b -> b64.encodeToString(b) } }
+
+            call.respond(votes)
         }
     }
 }
