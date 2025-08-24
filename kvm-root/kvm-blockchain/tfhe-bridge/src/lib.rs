@@ -190,6 +190,27 @@ pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1int_1importCompressedServer
     Box::into_raw(Box::new(IntKeypair { client, server })) as jlong
 }
 
+// Export the election ClientKey (dev-only)
+#[no_mangle]
+pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1int_1exportClientKey(
+    env: JNIEnv, _cls: JClass, kp_ptr: jlong,
+) -> jbyteArray {
+    let kp = unsafe { jlong_as_ref::<IntKeypair>(kp_ptr, "null IntKeypair") };
+    let bytes = bincode::serialize(&kp.client).expect("serialize client key");
+    env.byte_array_from_slice(&bytes).unwrap().as_raw()
+}
+
+// Import a ClientKey and pair it with a matching ServerKey (derived via CompressedServerKey)
+#[no_mangle]
+pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1int_1importClientKey(
+    env: JNIEnv, _cls: JClass, input: JByteArray,
+) -> jlong {
+    let bytes = env.convert_byte_array(input).unwrap();
+    let client: ClientKey = bincode::deserialize(&bytes).expect("deserialize client key");
+    let server = CompressedServerKey::new(&client).decompress();
+    Box::into_raw(Box::new(IntKeypair { client, server })) as jlong
+}
+
 
 
 

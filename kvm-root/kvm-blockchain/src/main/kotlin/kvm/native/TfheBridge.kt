@@ -30,6 +30,12 @@ object U16 {
 
     fun importCompressedServerKey(bytes: ByteArray): IntKeypair =
         IntKeypair(TfheBridgeJNI.tfhe_int_importCompressedServerKey(bytes))
+
+    fun exportClientKey(keys: IntKeypair): ByteArray =
+        TfheBridgeJNI.tfhe_int_exportClientKey(keys.ptr)
+
+    fun importClientKey(bytes: ByteArray): IntKeypair =
+        IntKeypair(TfheBridgeJNI.tfhe_int_importClientKey(bytes))
 }
 
 data class ServerCtx(val ptr: Long)
@@ -43,4 +49,5 @@ object U16Server {
 
     fun free(ctx: ServerCtx) =
         TfheBridgeJNI.tfhe_int_freeServerCtx(ctx.ptr)
+
 }

@@ -13,6 +13,7 @@ fun main(args: Array<String>) {
         ?: "public/u16_server_key.bin"
     val votesPath = args.firstOrNull { it.startsWith("--votes=") }?.substringAfter("=")
         ?: "encrypted_user_votes.json" // grab from your existing dump
+    val clientKeyPath = args.firstOrNull { it.startsWith("--client-key=") }?.substringAfter("=")
 
     val csk = File(keyPath).readBytes()
     val srv = U16Server.fromCompressed(csk)
@@ -37,4 +38,17 @@ fun main(args: Array<String>) {
     val outB64 = encTotals.map { Base64.getEncoder().encodeToString(U16.serialize(it)) }
     File("u16_tally_ciphertexts.json").writeText(json.encodeToString(outB64))
     println("Wrote encrypted totals -> u16_tally_ciphertexts.json")
+
+    if (clientKeyPath != null) {
+        val ck = File(clientKeyPath).readBytes()
+        val keys = U16.importClientKey(ck)
+        println("\nPlaintext tally:")
+        encTotals.forEachIndexed { i, ct ->
+            println("Candidate $i: ${U16.decrypt(ct, keys)}")
+        }
+    } else {
+        val out = encTotals.map { Base64.getEncoder().encodeToString(U16.serialize(it)) }
+        File("u16_tally_ciphertexts.json").writeText(json.encodeToString(out))
+        println("Wrote encrypted totals -> u16_tally_ciphertexts.json")
+    }
 }

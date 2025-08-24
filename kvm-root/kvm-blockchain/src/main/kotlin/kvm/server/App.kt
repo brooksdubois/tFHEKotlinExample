@@ -37,7 +37,10 @@ private object State {
     // Compressed ServerKey (write once so verifier can fetch)
     val compressedServerKey: ByteArray = U16.exportCompressedServerKey(u16Keys).also {
         File(publicDir, "u16_server_key.bin").writeBytes(it)
+        // DEV-ONLY: write client key so the verifier can decrypt tallies locally
+        File(publicDir, "u16_client_key.bin").writeBytes(U16.exportClientKey(u16Keys))
     }
+
 }
 
 @Serializable
@@ -67,17 +70,16 @@ data class BlockSummary(
 )
 
 @Serializable
-data class ChainOut(val blocks: List<BlockSummary>)
+data class VoteOut(
+    val ok: Boolean,
+    val candidate: Int,
+    val recordId: String
+)
 
-private fun resetMpcFiles(dir: File, parties: Int) {
-    dir.mkdirs()
-    repeat(parties) { pid -> File(dir, "party_${pid}.jsonl").writeText("") }
-}
-
-private fun commitment(id: String, electionId: String): String {
-    val digest = MessageDigest.getInstance("SHA-256").digest("$id|$electionId".toByteArray())
-    return digest.joinToString("") { "%02x".format(it) }
-}
+@Serializable
+data class ErrorOut(
+    val error: String
+)
 
 fun Application.module() {
     NativeLoader.load()
@@ -91,12 +93,11 @@ fun Application.module() {
 
     install(StatusPages) {
         exception<IllegalArgumentException> { call, cause ->
-            call.respond(HttpStatusCode.Conflict, mapOf("error" to cause.message))
+            call.respond(HttpStatusCode.Conflict, ErrorOut(cause.message ?: "invalid input"))
         }
         exception<Throwable> { call, cause ->
-            // last-resort safety
-            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "server error"))
-            throw cause  // or log it
+            call.respond(HttpStatusCode.InternalServerError, ErrorOut("server error"))
+            throw cause
         }
     }
 
@@ -135,10 +136,10 @@ fun Application.module() {
                 key = Keypair(0L)                      // never used since contract is empty
             )                                          // API shown here. :contentReference[oaicite:1]{index=1}
 
-            call.respond(HttpStatusCode.OK, mapOf(
-                "ok" to true,
-                "candidate" to body.candidate,
-                "recordId" to body.id
+            call.respond(HttpStatusCode.OK, VoteOut(
+                ok = true,
+                candidate = body.candidate,
+                recordId = body.id
             ))
         }
 

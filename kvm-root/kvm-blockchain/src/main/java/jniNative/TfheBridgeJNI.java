@@ -15,6 +15,9 @@ public class TfheBridgeJNI {
     public static native void   tfhe_int_freeCiphertext(long ctPtr);
     public static native void   tfhe_int_freeServerCtx(long srvPtr);
 
+    public static native byte[] tfhe_int_exportClientKey(long keyPtr);
+    public static native long   tfhe_int_importClientKey(byte[] data);
+
     static {
         boolean loaded = false;
 

@@ -4,53 +4,84 @@
 ### 0) Health
 GET {{base}}/
 
-### 1) Submit vote: Alice → candidate 3
+### Fetch compressed ServerKey (created on server startup)
+# Response is binary. Use "Save Response" in your client to write it to disk (e.g., public/u16_server_key.bin).
+GET {{base}}/server-key
+
+### Fetch all encrypted ballots (u16 one-hot per record, base64-encoded)
+GET {{base}}/user-votes
+
+### Cast vote #1 (candidate 0)
 POST {{base}}/vote
 Content-Type: {{json}}
 
 {
-  "id": "abc123",
-  "name": "Alice",
-  "address": "123 Main St",
+  "id": "u1",
+  "name": "Alice Test",
+  "address": "123 Test St",
   "age": 30,
-  "vote": 3
+  "candidate": 0
 }
 
-### 2) Submit vote: Bob → candidate 3
+### Cast vote #2 (candidate 2)
 POST {{base}}/vote
 Content-Type: {{json}}
 
 {
-  "id": "def456",
-  "name": "Bob",
-  "address": "456 Elm St",
-  "age": 22,
-  "vote": 3
-}
-
-### 3) Submit vote: Carol → candidate 1
-POST {{base}}/vote
-Content-Type: {{json}}
-
-{
-  "id": "ghi789",
-  "name": "Carol",
-  "address": "789 Oak Ave",
+  "id": "u2",
+  "name": "Bob Test",
+  "address": "456 Test Ave",
   "age": 28,
-  "vote": 1
+  "candidate": 2
 }
 
-### 4) Get tally (MPC local aggregate)
-GET {{base}}/tally
+### Cast vote #3 (candidate 2)
+POST {{base}}/vote
+Content-Type: {{json}}
 
-### 5) Inspect party share file (party 0)
-GET {{base}}/mpc/party/0
+{
+  "id": "u3",
+  "name": "Cara Test",
+  "address": "789 Test Rd",
+  "age": 35,
+  "candidate": 2
+}
 
-### 6) Chain dump (debug)
-GET {{base}}/chain
+### Cast vote #4 (candidate 1)
+POST {{base}}/vote
+Content-Type: {{json}}
 
-### (Optional) CORS preflight check for /vote
-OPTIONS {{base}}/vote
-Origin: http://localhost:3000
-Access-Control-Request-Method: POST
-Access-Control-Request-Headers: content-type
+{
+  "id": "u4",
+  "name": "Dan Test",
+  "address": "101 Test Blvd",
+  "age": 41,
+  "candidate": 1
+}
+
+### Cast vote #5 (candidate 3)
+POST {{base}}/vote
+Content-Type: {{json}}
+
+{
+  "id": "u5",
+  "name": "Eve Test",
+  "address": "202 Test Ct",
+  "age": 26,
+  "candidate": 3
+}
+
+### (Optional) Cast vote #6 (candidate 0)
+POST {{base}}/vote
+Content-Type: {{json}}
+
+{
+  "id": "u6",
+  "name": "Frank Test",
+  "address": "303 Test Ter",
+  "age": 33,
+  "candidate": 0
+}
+
+### Re-fetch encrypted ballots after casting
+GET {{base}}/user-votes
