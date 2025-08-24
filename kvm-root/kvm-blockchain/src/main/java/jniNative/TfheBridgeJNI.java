@@ -1,9 +1,7 @@
 package jniNative;
 
 public class TfheBridgeJNI {
-
-    // Keypair management
-    public static native long tfhe_generate_keys();
+    
     public static native void tfhe_free_keypair(long keyPtr);
 
     // Encryption / Decryption
@@ -29,6 +27,27 @@ public class TfheBridgeJNI {
     public static native long import_client_key(byte[] serialized);
     public static native long import_cloud_key(byte[] serialized);
     public static native long deserialize_ciphertext(byte[] data);
+
+    // === Integer (u16) ===
+    public static native long  tfhe_int_generate_keys();
+    public static native long  tfhe_int_encryptU16(long keyPtr, int value);
+    public static native long  tfhe_int_add(long keyPtr, long aPtr, long bPtr);
+    public static native int   tfhe_int_decryptU16(long keyPtr, long ctPtr);
+    public static native byte[] tfhe_int_serialize(long ctPtr);
+    public static native long   tfhe_int_deserialize(byte[] data);
+
+    // compressed server key I/O
+    public static native byte[] tfhe_int_exportCompressedServerKey(long keyPtr);
+    public static native long   tfhe_int_importCompressedServerKey(byte[] data);
+
+    // === Integer (u16) server-only context (verifier) ===
+    public static native long   tfhe_int_serverCtxFromCompressed(byte[] compressedServerKey);
+    public static native long   tfhe_int_addWithServer(long serverCtxPtr, long aPtr, long bPtr);
+
+    // === Integer (u16) frees (optional but recommended) ===
+    public static native void   tfhe_int_freeKeypair(long keyPtr);
+    public static native void   tfhe_int_freeCiphertext(long ctPtr);
+    public static native void   tfhe_int_freeServerCtx(long serverCtxPtr);
 
     static {
         boolean loaded = false;

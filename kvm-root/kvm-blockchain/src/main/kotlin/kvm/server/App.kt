@@ -102,43 +102,6 @@ fun Application.module() {
     routing {
         get("/") { call.respond(mapOf("ok" to true)) }
 
-        post("/vote") {
-            val v = call.receive<VoteIn>()
-            require(v.vote in 0 until NUM_CANDIDATES) { "vote out of range" }
-
-            val now = Instant.now().epochSecond
-            val userKey = TfheBridge.generateKeypair()
-            val clientKeyB64 = Base64.getEncoder().encodeToString(userKey.exportClientKey())
-
-            // TFHE receipt (user-only decrypt)
-            val userEncrypted = EncryptedInt.fromInt(v.vote, userKey)
-            val receiptBitsB64 = userEncrypted.serialize().map { Base64.getEncoder().encodeToString(it) }
-
-            val cmt = commitment(v.id, "election2025")
-
-            // Build record first
-            val rec = SimpleRecord(
-                id = v.id, name = v.name, address = v.address, age = v.age,
-                vote = userEncrypted, userEncryptedVote = userEncrypted.serialize(),
-                timestamp = now, commitment = cmt
-            )
-
-            // ✅ Try to add block BEFORE writing shares
-            State.chain.addBlock(listOf(rec), emptyList(), TfheBridge.generateKeypair())
-
-            // ⬇️ Only after success, create and append shares
-            val shares = additiveShares(oneHot(v.vote, NUM_CANDIDATES), NUM_PARTIES)
-            shares.forEachIndexed { partyId, shareVec ->
-                appendShareRow(State.mpcDir, partyId, v.id, shareVec)
-            }
-
-            // Rewrite user receipts export (optional, but do it after accept)
-            val all = State.chain.getChain().flatMap { it.records }
-            writeUserVotesJson(all, File(State.publicDir, "encrypted_user_votes.json").path)
-
-            call.respond(ReceiptOut(v.id, cmt, clientKeyB64, receiptBitsB64))
-        }
-
         get("/user-votes") {
             val base64 = Base64.getEncoder()
             val votes: List<List<String>> =
