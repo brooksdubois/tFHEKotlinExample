@@ -20,3 +20,7 @@ application {
         "-Djava.library.path=../kvm-blockchain/libs"
     )
 }
+
+tasks.named<JavaExec>("run") {
+    workingDir = rootProject.projectDir
+}

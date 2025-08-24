@@ -4,6 +4,9 @@
 ### 0) Health
 GET {{base}}/
 
+###
+GET {{base}}/blocks
+
 ### Fetch compressed ServerKey (created on server startup)
 # Response is binary. Use "Save Response" in your client to write it to disk (e.g., public/u16_server_key.bin).
 GET {{base}}/server-key

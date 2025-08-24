@@ -30,6 +30,9 @@ gradlew.bat
 verifier/mpc/
 public/
 kvm-blockchain/public/
+receipts/
+verifier/receipts/
+verifier/stored_receipt.txt
 .idea
 .kotlin
 

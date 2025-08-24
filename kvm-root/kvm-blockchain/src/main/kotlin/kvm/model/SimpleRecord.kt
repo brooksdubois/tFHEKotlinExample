@@ -5,7 +5,8 @@ data class SimpleRecord(
     val name: String,
     val address: String,
     val age: Int,
-    val timestamp: Long,
+    val timestamp: Long = System.currentTimeMillis(),
     val commitment: String,
-    val u16OneHot: List<ByteArray> //per-candidate u16 one-hot ciphertexts (serialized bytes)
+    val u16OneHot: List<ByteArray>, //per-candidate u16 one-hot ciphertexts (serialized bytes)
+    val receiptCtB64: String? = null // NEW: per-voter verification ciphertext
 )
