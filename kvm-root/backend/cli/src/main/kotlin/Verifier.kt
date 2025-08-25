@@ -5,7 +5,6 @@ import java.util.Base64
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.decodeFromString
 import kvm.native.EncPtr
 import kvm.native.Keypair
 import kvm.native.ServerCtx

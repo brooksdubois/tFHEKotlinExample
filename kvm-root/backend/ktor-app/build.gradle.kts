@@ -16,6 +16,8 @@ dependencies {
   implementation("ch.qos.logback:logback-classic:1.5.12")
 }
 
+kotlin { jvmToolchain(17) }
+
 application {
     mainClass.set("app.AppKt")
     applicationDefaultJvmArgs += listOf(
