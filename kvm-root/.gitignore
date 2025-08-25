@@ -6,10 +6,8 @@ out/
 *.iml
 *.ipr
 *.iws
-kvm-blockchain/gradle/wrapper/gradle-wrapper.jar
-kvm-blockchain/gradle/wrapper/gradle-wrapper.properties
-kvm-blockchain/gradlew
-kvm-blockchain/gradlew.bat
+gradle/wrapper/gradle-wrapper.jar
+gradle/wrapper/gradle-wrapper.properties
 gradlew
 gradlew.bat
 
@@ -23,16 +21,13 @@ gradlew.bat
 *.kts~
 
 # === Rust (cargo) ===
-/kvm-blockchain/target/
-/kvm-blockchain/tfhe-bridge/target/
-/kvm-blockchain/Cargo.lock
+backend/crypto/target/
+backend/crypto/tfhe-bridge/target/
+backend/crypto/Cargo.lock
 
-verifier/mpc/
 public/
-kvm-blockchain/public/
 receipts/
-verifier/receipts/
-verifier/stored_receipt.txt
+verifier/
 .idea
 .kotlin
 
@@ -40,7 +35,6 @@ verifier/stored_receipt.txt
 # /target/
 
 # === JNI native build artifacts ===
-/kvm-blockchain/libs/
 *.so
 *.dylib
 *.dll
@@ -53,3 +47,4 @@ Thumbs.db
 *.json
 *.key
 encrypted_tally.json
+artifacts/

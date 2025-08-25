@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "2.1.10"
+    kotlin("jvm") version "2.0.21"
     kotlin("plugin.serialization") version "2.1.10"
     application
 }
@@ -9,15 +9,16 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":kvm-blockchain")) // if main project is named this
+    implementation(project(":backend:crypto")) // JNI wrappers + TFHE bridge
+    implementation(project(":backend:core"))   // models/utils (include if CLI uses them)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 }
 
 application {
     mainClass.set("VerifierKt")
-
-    applicationDefaultJvmArgs = listOf(
-        "-Djava.library.path=../kvm-blockchain/libs"
+    
+    applicationDefaultJvmArgs += listOf(
+        "-Djava.library.path=${project(":backend:crypto").projectDir}/tfhe-bridge/target/release"
     )
 }
 

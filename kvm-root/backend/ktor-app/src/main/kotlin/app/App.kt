@@ -1,4 +1,4 @@
-package kvm.server
+package app
 
 import io.ktor.http.*
 import io.ktor.server.plugins.statuspages.*
@@ -83,7 +83,11 @@ data class VoteOut(
 )
 
 @Serializable
-data class ErrorOut(val error: String)
+data class ErrorOut(
+    val error: String,
+    val code: String? = null,
+    val details: String? = null
+)
 
 // Optional: raw ballot ingestion (pre-encrypted one-hot u16s), if/when you want it
 @Serializable

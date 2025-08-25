@@ -1,15 +1,8 @@
-// Root build.gradle.kts — for multi-project setup
 plugins {
-    // optional: declare plugin versions globally
-    kotlin("jvm") version "2.1.10" apply false
-    kotlin("plugin.serialization") version "2.1.10" apply false
+    kotlin("jvm") version "2.0.21"
+    application
 }
 
 allprojects {
-    repositories {
-        mavenCentral()
-        maven { url = uri("https://jitpack.io") }
-    }
+    repositories { mavenCentral() }
 }
-
-

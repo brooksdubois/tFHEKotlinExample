@@ -1,7 +1,13 @@
-rootProject.name = "kvm"
+pluginManagement {
+    repositories {
+        gradlePluginPortal();
+        mavenCentral()
+    }
+}
 
-include(":kvm-blockchain")
-include(":verifier")
+dependencyResolutionManagement {
+    repositories { mavenCentral() }
+}
 
-project(":kvm-blockchain").projectDir = file("kvm-blockchain")
-project(":verifier").projectDir = file("verifier")
+rootProject.name = "kvm-root"
+include("backend:core", "backend:crypto", "backend:ktor-app", "backend:cli")
