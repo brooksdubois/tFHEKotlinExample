@@ -1,0 +1,131 @@
+@host = http://localhost:8080
+
+### ─────────────────────────────────────────────────────────────────────────────
+### 0) Health: server key (ensures Ktor is running and keys are generated)
+GET {{host}}/server-key
+
+### ─────────────────────────────────────────────────────────────────────────────
+### 1) Cast three sample votes (server encrypts one-hot u16 under election key)
+
+### Vote A (u100 → candidate 2)
+POST {{host}}/vote
+Content-Type: application/json
+
+{
+  "id": "u100",
+  "name": "Alice Example",
+  "address": "123 Main St",
+  "age": 34,
+  "candidate": 2
+}
+
+### Vote B (u101 → candidate 0)
+POST {{host}}/vote
+Content-Type: application/json
+
+{
+  "id": "u101",
+  "name": "Bob Example",
+  "address": "45 Side St",
+  "age": 41,
+  "candidate": 0
+}
+
+### Vote C (u102 → candidate 3)
+POST {{host}}/vote
+Content-Type: application/json
+
+{
+  "id": "u102",
+  "name": "Carol Example",
+  "address": "9 Elm Rd",
+  "age": 29,
+  "candidate": 3
+}
+
+### Inspect blocks (commitment + membership proof material)
+GET {{host}}/blocks
+
+### Raw encrypted ballots feed for the verifier (list of one-hot ciphertext lists)
+GET {{host}}/user-votes
+
+### Optional: fetch a stored per-voter receipt ciphertext (dev)
+GET {{host}}/receipt/u100
+
+### ─────────────────────────────────────────────────────────────────────────────
+### 2) MPC session — start from an uploaded per‑candidate ciphertext totals vector
+### IMPORTANT: Paste the Base64 **per-candidate** tally ciphertexts you created with the CLI fold
+### (the file is u16_tally_ciphertexts.json). The server will snapshot these and open a session.
+POST {{host}}/mpc/sessions/start
+Content-Type: application/json
+
+{
+  "source": "upload",
+  "candidates": 4,
+  "ctsB64": [
+    /* PASTE CONTENTS OF u16_tally_ciphertexts.json HERE, e.g.
+       "AAABBB...", "CCCDDD...", "EEEFFF...", "GGGHHH..."  */
+  ]
+}
+
+### Capture the session id for subsequent calls
+@sid = {{last_response.body.$.session.id}}
+
+### Inspect session transcript immediately after start
+GET {{host}}/mpc/sessions/{{sid}}
+
+### ─────────────────────────────────────────────────────────────────────────────
+### 3) DEV-ONLY maskers: let the server generate/apply masks (insecure IRL, great for smoke tests)
+
+### Participant A masks (writes verifier/sessions/<sid>/masks_A.json on disk)
+POST {{host}}/mpc/sessions/{{sid}}/mask:server
+Content-Type: application/json
+
+{ "who": "A", "seed": 1234 }
+
+### Participant B masks (writes verifier/sessions/<sid>/masks_B.json on disk)
+POST {{host}}/mpc/sessions/{{sid}}/mask:server
+Content-Type: application/json
+
+{ "who": "B", "seed": 5678 }
+
+### Check the chained masked ciphertext vector
+GET {{host}}/mpc/sessions/{{sid}}
+
+### ─────────────────────────────────────────────────────────────────────────────
+### 4) DEV-ONLY decrypt of masked totals (requires Base64 of public/u16_client_key.bin)
+### ACTION: Base64-encode the file public/u16_client_key.bin and paste into clientKeyB64
+
+POST {{host}}/mpc/sessions/{{sid}}/decrypt
+Content-Type: application/json
+
+{ "clientKeyB64": "PASTE_BASE64_OF_public/u16_client_key.bin_HERE" }
+
+### Inspect masked plaintext totals produced by the decrypt step
+GET {{host}}/mpc/sessions/{{sid}}
+
+### ─────────────────────────────────────────────────────────────────────────────
+### 5) Reveal masks and compute final totals
+### ACTION: Open verifier/sessions/<sid>/masks_A.json and masks_B.json written earlier,
+###         and paste their integer arrays below in the exact order (length = candidates).
+
+### Reveal A
+POST {{host}}/mpc/sessions/{{sid}}/reveal
+Content-Type: application/json
+
+{
+  "who": "A",
+  "masks": [ /* paste array from masks_A.json, e.g. 123,456,789,42 */ ]
+}
+
+### Reveal B
+POST {{host}}/mpc/sessions/{{sid}}/reveal
+Content-Type: application/json
+
+{
+  "who": "B",
+  "masks": [ /* paste array from masks_B.json */ ]
+}
+
+### Final check — totals appear once all reveals are in; finalized=true when done
+GET {{host}}/mpc/sessions/{{sid}}

@@ -1,0 +1,141 @@
+@host = http://localhost:8080
+
+### ─────────────────────────────────────────────────────────────────────────────
+### 0) Health: confirm server + dev keys are available
+GET {{host}}/server-key
+
+### ─────────────────────────────────────────────────────────────────────────────
+### 1) Cast a few sample votes (server encrypts one-hot u16)
+
+### Vote A (u100 → candidate 2)
+POST {{host}}/vote
+Content-Type: application/json
+
+{
+  "id": "u100",
+  "name": "Alice Example",
+  "address": "123 Main St",
+  "age": 34,
+  "candidate": 2
+}
+
+### Vote B (u101 → candidate 0)
+POST {{host}}/vote
+Content-Type: application/json
+
+{
+  "id": "u101",
+  "name": "Bob Example",
+  "address": "45 Side St",
+  "age": 41,
+  "candidate": 0
+}
+
+### Vote C (u102 → candidate 3)
+POST {{host}}/vote
+Content-Type: application/json
+
+{
+  "id": "u102",
+  "name": "Carol Example",
+  "address": "9 Elm Rd",
+  "age": 29,
+  "candidate": 3
+}
+
+### Inspect blocks
+GET {{host}}/blocks
+
+### Encrypted ballots feed for the verifier (for your CLI fold step)
+GET {{host}}/user-votes
+
+### ─────────────────────────────────────────────────────────────────────────────
+### 2) MPC session — start from uploaded per-candidate tally ciphertexts
+### Paste the Base64 ciphertexts from u16_tally_ciphertexts.json (CLI fold output).
+POST {{host}}/mpc/sessions/start
+Content-Type: application/json
+
+{
+  "source": "upload",
+  "candidates": 4,
+  "ctsB64": [
+
+  ]
+}
+
+### Capture the session id
+@sid = {{last_response.body.$.session.id}}
+
+GET {{host}}/mpc/sessions/ed97a231dd1149d7b9bcd49dd707ae04/artifacts
+
+### ─────────────────────────────────────────────────────────────────────────────
+### 3) DEV-ONLY masking (server generates/applies masks; insecure IRL)
+### Participant A
+POST {{host}}/mpc/sessions/ed97a231dd1149d7b9bcd49dd707ae04/mask:server
+Content-Type: application/json
+
+{ "who": "A", "seed": 1234 }
+
+### Participant B
+POST {{host}}/mpc/sessions/ed97a231dd1149d7b9bcd49dd707ae04/mask:server
+Content-Type: application/json
+
+{ "who": "B", "seed": 5678 }
+
+
+### Quick peek (tiny session object; big arrays are on disk)
+GET {{host}}/mpc/sessions/ed97a231dd1149d7b9bcd49dd707ae04/artifacts
+
+### ─────────────────────────────────────────────────────────────────────────────
+### 4) DEV-ONLY decrypt of masked totals
+### No body needed — server auto-loads public/u16_client_key.bin for dev.
+POST {{host}}/mpc/sessions/ed97a231dd1149d7b9bcd49dd707ae04/decrypt
+Content-Type: application/json
+
+{}
+
+### Inspect masked plaintext totals (artifact list)
+GET {{host}}/mpc/sessions/ed97a231dd1149d7b9bcd49dd707ae04
+###
+GET {{host}}/mpc/sessions/ed97a231dd1149d7b9bcd49dd707ae04/artifacts
+
+### ─────────────────────────────────────────────────────────────────────────────
+### 5) Reveal masks → compute final totals
+### ACTION: open verifier/sessions/<sid>/masks_A.json and masks_B.json,
+###         paste their arrays below (order matters).
+
+### Reveal A
+POST {{host}}/mpc/sessions/ed97a231dd1149d7b9bcd49dd707ae04/reveal
+Content-Type: application/json
+
+{
+  "who": "A",
+  "masks": [
+    5266,
+    45138,
+    60719,
+    64911
+  ]
+}
+
+### Reveal B
+POST {{host}}/mpc/sessions/ed97a231dd1149d7b9bcd49dd707ae04/reveal
+Content-Type: application/json
+
+{
+  "who": "B",
+  "masks": [
+    20451,
+    49474,
+    4785,
+    44880
+  ]
+}
+
+### Final transcript + artifacts (totals.json will be listed)
+GET {{host}}/mpc/sessions/ed97a231dd1149d7b9bcd49dd707ae04
+###
+GET {{host}}/mpc/sessions/ed97a231dd1149d7b9bcd49dd707ae04/artifacts
+
+### Optional: download everything as a zip
+GET {{host}}/mpc/sessions/ed97a231dd1149d7b9bcd49dd707ae04/zip
