@@ -17,6 +17,7 @@ public class TfheBridgeJNI {
 
     public static native byte[] tfhe_int_exportClientKey(long keyPtr);
     public static native long   tfhe_int_importClientKey(byte[] data);
+    public static native long   tfhe_int_addClearWithServer(long srvPtr, long ctPtr, int clear);
 
     static {
         boolean loaded = false;

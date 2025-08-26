@@ -41,6 +41,9 @@ object U16 {
 data class ServerCtx(val ptr: Long)
 
 object U16Server {
+    fun addClear(srv: ServerCtx, ct: EncPtr, v: Int): EncPtr =
+        EncPtr(TfheBridgeJNI.tfhe_int_addClearWithServer(srv.ptr, ct.raw, v and 0xFFFF))
+
     fun fromCompressed(bytes: ByteArray): ServerCtx =
         ServerCtx(TfheBridgeJNI.tfhe_int_serverCtxFromCompressed(bytes))
 

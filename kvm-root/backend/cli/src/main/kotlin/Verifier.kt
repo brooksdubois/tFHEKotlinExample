@@ -51,6 +51,11 @@ data class VerifiedVote(
     val timestamp: Long? = null
 )
 
+@Serializable data class MPCMaskBundle(
+    val participant: String,
+    val masks: List<Int>,        // each in [0,65535]
+    val seed: Long? = null
+)
 // ------------------------
 // Helpers
 // ------------------------
@@ -207,6 +212,63 @@ private fun cmdReceiptDecrypt(args: List<String>) {
     println("Decrypted receipt → candidate $p")
 }
 
+private fun modU16(x: Int) = (x and 0xFFFF)
+
+private fun cmdMpcMask(args: List<String>) {
+    val inPath  = args.firstOrNull { it.startsWith("--in=") }?.substringAfter("=") ?: "u16_tally_ciphertexts.json"
+    val outPath = args.firstOrNull { it.startsWith("--out=") }?.substringAfter("=") ?: "u16_tally_ciphertexts.masked.json"
+    val mOut    = args.firstOrNull { it.startsWith("--save-masks=") }?.substringAfter("=") ?: "masks.json"
+    val server  = args.firstOrNull { it.startsWith("--server-key=") }?.substringAfter("=") ?: "public/u16_server_key.bin"
+    val who     = args.firstOrNull { it.startsWith("--who=") }?.substringAfter("=") ?: "participant"
+    val seed    = args.firstOrNull { it.startsWith("--seed=") }?.substringAfter("=")?.toLongOrNull()
+    val rnd     = if (seed != null) kotlin.random.Random(seed) else kotlin.random.Random.Default
+
+    val srv = U16Server.fromCompressed(File(server).readBytes())
+    val inB64: List<String> = Json.decodeFromString(File(inPath).readText())
+    val cts = inB64.map { U16.deserialize(Base64.getDecoder().decode(it)) }
+
+    val masks: List<Int> = List(cts.size) { rnd.nextInt(0, 1 shl 16) }
+    val masked = cts.zip(masks).map { (ct, m) -> U16Server.addClear(srv, ct, m) }
+    val outB64 = masked.map { Base64.getEncoder().encodeToString(U16.serialize(it)) }
+
+    File(outPath).writeText(Json { prettyPrint = true }.encodeToString(outB64))
+    File(mOut).writeText(Json { prettyPrint = true }.encodeToString(MPCMaskBundle(who, masks, seed)))
+    println("Wrote masked ciphertexts -> $outPath")
+    println("Wrote private masks -> $mOut (keep secret until reveal)")
+}
+
+private fun cmdMpcDecrypt(args: List<String>) {
+    val inPath  = args.firstOrNull { it.startsWith("--in=") }?.substringAfter("=") ?: "u16_tally_ciphertexts.masked.json"
+    val outPath = args.firstOrNull { it.startsWith("--out=") }?.substringAfter("=") ?: "masked_plain.json"
+    val ckPath  = args.firstOrNull { it.startsWith("--client-key=") }?.substringAfter("=")
+        ?: error("mpc-decrypt requires --client-key=PATH")
+
+    val ck = U16.importClientKey(File(ckPath).readBytes())
+    val inB64: List<String> = Json.decodeFromString(File(inPath).readText())
+    val cts = inB64.map { U16.deserialize(Base64.getDecoder().decode(it)) }
+    val maskedPlain = cts.map { U16.decrypt(it, ck) }
+    File(outPath).writeText(Json { prettyPrint = true }.encodeToString(maskedPlain))
+    println("Wrote masked plaintext totals -> $outPath")
+}
+
+private fun cmdMpcUnmask(args: List<String>) {
+    val inPath  = args.firstOrNull { it.startsWith("--in=") }?.substringAfter("=") ?: "masked_plain.json"
+    val outPath = args.firstOrNull { it.startsWith("--out=") }?.substringAfter("=") ?: "totals.json"
+    val maskList = args.firstOrNull { it.startsWith("--masks=") }?.substringAfter("=")
+        ?: error("mpc-unmask requires --masks=maskA.json,maskB.json,...")
+
+    val masked: List<Int> = Json.decodeFromString(File(inPath).readText())
+    val bundles: List<MPCMaskBundle> = maskList.split(",").map { p ->
+        Json.decodeFromString(File(p.trim()).readText())
+    }
+    require(bundles.all { it.masks.size == masked.size }) { "mask lengths mismatch" }
+    val sumMasks = (0 until masked.size).map { i -> bundles.sumOf { it.masks[i] } and 0xFFFF }
+    val totals = masked.indices.map { i -> modU16(masked[i] - sumMasks[i]) }
+
+    File(outPath).writeText(Json { prettyPrint = true }.encodeToString(totals))
+    println("Wrote final plaintext totals -> $outPath")
+}
+
 // ------------------------
 // Main
 // ------------------------
@@ -216,6 +278,9 @@ fun main(rawArgs: Array<String>) {
         null, "fold" -> cmdFold(args.drop(1))
         "receipt-gen" -> cmdReceiptGen(args.drop(1))
         "receipt-decrypt" -> cmdReceiptDecrypt(args.drop(1))
+        "mpc-mask" -> cmdMpcMask(args.drop(1))
+        "mpc-decrypt" -> cmdMpcDecrypt(args.drop(1))
+        "mpc-unmask" -> cmdMpcUnmask(args.drop(1))
         else -> {
             println(
                 """

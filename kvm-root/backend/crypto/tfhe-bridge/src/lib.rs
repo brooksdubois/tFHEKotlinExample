@@ -211,6 +211,16 @@ pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1int_1importClientKey(
     Box::into_raw(Box::new(IntKeypair { client, server })) as jlong
 }
 
+#[no_mangle]
+pub extern "C" fn Java_jniNative_TfheBridgeJNI_tfhe_1int_1addClearWithServer(
+    _env: jni::JNIEnv, _cls: jni::objects::JClass, srv_ptr: jni::sys::jlong,
+    ct_ptr: jni::sys::jlong, clear: jni::sys::jint,
+) -> jni::sys::jlong {
+    let srv = jlong_as_ref::<IntServerCtx>(srv_ptr, "null server ctx");
+    let ct  = jlong_as_ref::<tfhe::FheUint16>(ct_ptr, "null ct");
+    let out = tfhe::with_server_key_as_context(srv.server.clone(), || ct + (clear as u16));
+    Box::into_raw(Box::new(out)) as jni::sys::jlong
+}
 
 
 
