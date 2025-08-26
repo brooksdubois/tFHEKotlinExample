@@ -6,35 +6,19 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.http.*
-import java.io.File
 import java.time.Instant
 import java.util.Base64
-import kvm.core.Blockchain
 import kvm.model.SimpleRecord
 import kvm.native.EncPtr
 import kvm.native.Keypair
 import kvm.native.U16
 import kvm.voting.*
+import app.state.VotingState
 
 private const val NUM_CANDIDATES = 4
 private const val ELECTION_ID = "election-1"
 
 private fun oneHot(ix: Int, n: Int) = List(n) { if (it == ix) 1 else 0 }
-
-private object VotingState {
-    val chain = Blockchain().apply { mineGenesis() }
-    val publicDir = File("public").also { it.mkdirs() }
-
-    // Integer (u16) election keypair (in-memory)
-    val u16Keys = U16.generateKeypair()
-
-    // Compressed ServerKey (write once so verifier can fetch)
-    val compressedServerKey: ByteArray = U16.exportCompressedServerKey(u16Keys).also {
-        File(publicDir, "u16_server_key.bin").writeBytes(it)
-        // DEV-ONLY: write client key so the verifier can decrypt tallies locally
-        File(publicDir, "u16_client_key.bin").writeBytes(U16.exportClientKey(u16Keys))
-    }
-}
 
 private fun requireBase64OrNull(b64: String?) {
     if (b64 == null) return

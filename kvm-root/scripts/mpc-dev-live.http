@@ -1,0 +1,92 @@
+@host = http://localhost:8080
+
+### ─────────────────────────────────────────────────────────────────────────────
+### 0) Health
+GET {{host}}/server-key
+
+### ─────────────────────────────────────────────────────────────────────────────
+### 1) (Optional) Cast a few votes first so /start?source=live has data
+POST {{host}}/vote
+Content-Type: application/json
+
+{ "id":"u100","name":"Alice Example","address":"123 Main St","age":34,"candidate":2 }
+
+###
+POST {{host}}/vote
+Content-Type: application/json
+
+{ "id":"u101","name":"Bob Example","address":"45 Side St","age":41,"candidate":0 }
+
+###
+POST {{host}}/vote
+Content-Type: application/json
+
+{ "id":"u102","name":"Carol Example","address":"9 Elm Rd","age":29,"candidate":3 }
+
+### Inspect blocks / verifier feed (optional)
+GET {{host}}/blocks
+###
+GET {{host}}/user-votes
+
+### ─────────────────────────────────────────────────────────────────────────────
+### 2) Start MPC session from the LIVE chain snapshot (no CLI, no upload)
+### You may pin the candidate count explicitly by adding "candidates": 4
+POST {{host}}/mpc/sessions/start
+Content-Type: application/json
+
+{ "source": "live", "candidates": 4 }
+
+### Capture session id
+@sid = {{last_response.body.$.session.id}}
+
+### List small artifact metadata
+GET {{host}}/mpc/sessions/{{sid}}/artifacts
+
+### ─────────────────────────────────────────────────────────────────────────────
+### 3) DEV masking (server generates & applies masks; insecure IRL)
+POST {{host}}/mpc/sessions/{{sid}}/mask:server
+Content-Type: application/json
+
+{ "who": "A", "seed": 1234 }
+
+###
+POST {{host}}/mpc/sessions/{{sid}}/mask:server
+Content-Type: application/json
+
+{ "who": "B", "seed": 5678 }
+
+### Check transcript (big arrays live on disk under verifier/sessions/<sid>)
+GET {{host}}/mpc/sessions/{{sid}}
+###
+GET {{host}}/mpc/sessions/{{sid}}/artifacts
+
+### ─────────────────────────────────────────────────────────────────────────────
+### 4) DEV decrypt of masked totals (auto-loads public/u16_client_key.bin)
+POST {{host}}/mpc/sessions/{{sid}}/decrypt
+Content-Type: application/json
+
+{}
+
+### Inspect masked plaintext totals (artifact list)
+GET {{host}}/mpc/sessions/{{sid}}/artifacts
+
+### ─────────────────────────────────────────────────────────────────────────────
+### 5) Reveal masks (paste arrays from verifier/sessions/<sid>/masks_*.json)
+POST {{host}}/mpc/sessions/{{sid}}/reveal
+Content-Type: application/json
+
+{ "who": "A", "masks": [ /* paste from masks_A.json */ ] }
+
+###
+POST {{host}}/mpc/sessions/{{sid}}/reveal
+Content-Type: application/json
+
+{ "who": "B", "masks": [ /* paste from masks_B.json */ ] }
+
+### Final transcript + artifact list (totals.json should be present)
+GET {{host}}/mpc/sessions/{{sid}}
+###
+GET {{host}}/mpc/sessions/{{sid}}/artifacts
+
+### Optional: download full transcript as a zip
+GET {{host}}/mpc/sessions/{{sid}}/zip

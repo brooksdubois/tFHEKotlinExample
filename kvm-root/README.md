@@ -1,6 +1,10 @@
 
 # tFHE With Zama in Kotlin
 
+## NOTE: All of this information is out of date and will be updated soon.
+> The way to run this is to start ktor and run mpc_live_e2e_test.zsh
+> further modifications will be made to this readme to explain how to run works.
+
 This is a multi-project gradle build with a few moving pieces I will attempt to describe here.
 
 The core tenets of this project are that:

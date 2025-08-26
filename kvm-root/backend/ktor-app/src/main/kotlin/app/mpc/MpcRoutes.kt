@@ -14,6 +14,9 @@ import java.io.File
 import kvm.mpc.*
 import kvm.native.U16
 import kvm.native.U16Server
+import app.state.VotingState
+import kvm.model.SimpleRecord
+
 
 private val json = Json { prettyPrint = true }
 
@@ -50,6 +53,29 @@ private fun decryptMasked(ctsB64: List<String>, clientKeyB64: String): List<Int>
 private fun clientKeyB64FromFile(path: String): String =
     Base64.getEncoder().encodeToString(File(path).readBytes())
 
+private fun foldLiveTalliesB64(): Pair<List<String>, Int> {
+    val srv = loadServerCtx()
+    val records = VotingState.chain.getChain()
+        .flatMap { it.records }
+        .filterIsInstance<SimpleRecord>()
+
+    // Derive candidate count from the first record or default to 4 if no votes yet
+    val candidates = records.firstOrNull()?.u16OneHot?.size ?: 4
+
+    // Accumulate per-candidate ciphertexts
+    val acc = Array<kvm.native.EncPtr?>(candidates) { null }
+    for (rec in records) {
+        if (rec.u16OneHot.size != candidates) continue
+        for (i in 0 until candidates) {
+            val ct = U16.deserialize(rec.u16OneHot[i])
+            acc[i] = acc[i]?.let { U16Server.add(srv, it, ct) } ?: ct
+        }
+    }
+    // If a candidate never received any vote, emit an encryption of 0
+    val filled = acc.map { it ?: U16.encrypt(0, VotingState.u16Keys) }
+    val b64 = filled.map { Base64.getEncoder().encodeToString(U16.serialize(it)) }
+    return b64 to candidates
+}
 
 fun Application.mpcRoutes() {
     routing {
@@ -67,7 +93,11 @@ fun Application.mpcRoutes() {
                         val c = req.candidates ?: cts.size
                         cts to c
                     }
-                    "live" -> error("source=live not wired: compute fold server-side or use 'upload'")
+                    "live" -> {
+                        // Fold the current ballots from the in-memory chain
+                        val (b64, c) = foldLiveTalliesB64()
+                        b64 to (req.candidates ?: c) // allow explicit override, else derive
+                    }
                     else -> error("unsupported source")
                 }
 
