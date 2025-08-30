@@ -14,7 +14,7 @@ import kvm.native.U16Server
 // ------------------------
 // JSON / DTOs
 // ------------------------
-private val json = Json { prettyPrint = true }
+//private val json = Json { prettyPrint = true }
 
 private typealias VotesJson = List<List<String>> // per-record one-hot u16 ciphertexts (b64)
 
