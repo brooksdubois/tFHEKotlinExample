@@ -16,7 +16,8 @@ data class VoteIn(
 data class VoteOut(
     val ok: Boolean,
     val candidate: Int,
-    val recordId: String
+    val recordId: String,
+    val recieptB64: String? = null
 )
 
 @Serializable

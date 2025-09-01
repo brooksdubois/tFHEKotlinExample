@@ -21,6 +21,12 @@ fun Application.votingRoutes(useCase: VotingUseCase = VotingUseCase()) {
 
         post("/vote") {
             val out = useCase.vote(call.receive())
+            val rec = useCase.findRecordById(out.recordId)
+                ?: return@post call.respond(HttpStatusCode.NotFound)
+
+            // derive a cryptographic receipt
+            val receipt = receiptForRecord(rec, electionId = "election-1") // or from config
+            out.recieptB64 = receipt.toString()
             call.respond<VoteOut>(HttpStatusCode.OK, out)
         }
 
@@ -34,11 +40,11 @@ fun Application.votingRoutes(useCase: VotingUseCase = VotingUseCase()) {
         }
 
         get("/receipt/{id}") {
-            val id = call.parameters["id"]!!
-            val receipt = useCase.receiptFor(id)
-            if (receipt == null)
-                return@get call.respond(HttpStatusCode.NotFound, ErrorOut("not found"))
-            call.respond<Map<String, String>>(mapOf("id" to id, "receiptCtB64" to receipt))
+            val id = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val rec = useCase.findRecordById(id)
+                ?: return@get call.respond(HttpStatusCode.NotFound)
+            val receipt = receiptForRecord(rec, electionId = "election-1")
+            call.respond(receipt)
         }
     }
 }

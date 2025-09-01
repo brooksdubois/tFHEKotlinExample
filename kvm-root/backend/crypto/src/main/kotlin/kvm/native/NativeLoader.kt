@@ -36,14 +36,12 @@ object NativeLoader {
 
         val searchDirs = listOfNotNull(
             // Most likely: <repo>/libs
-            File(userDir, "libs"),
+            File(userDir, "backend/crypto/tfhe-bridge/target/release"),
             File(userDir, "kvm-blockchain/libs"),
-            userDir.parentFile?.let { File(it, "libs") },              // ../libs
-            userDir.parentFile?.parentFile?.let { File(it, "libs") },  // ../../libs
             // also try current dir and near classes
             userDir,
-            File(codeDir, "libs"),
-            codeDir.parentFile?.let { File(it, "libs") }
+            File(codeDir, "backend/crypto/tfhe-bridge/target/release"),
+            codeDir.parentFile?.let { File(it, "backend/crypto/tfhe-bridge/target/releases") }
         ).distinct()
 
         val found = searchDirs

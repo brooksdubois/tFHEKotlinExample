@@ -9,6 +9,7 @@ import kvm.native.Keypair
 import kvm.native.U16
 import app.state.VotingState
 import kvm.voting.*
+import java.util.Date
 
 class VotingUseCase(
     private val state: VotingState = VotingState,
@@ -23,7 +24,8 @@ class VotingUseCase(
             throw IllegalArgumentException("Invalid base64 in receiptCtB64")
         }
     }
-    private fun findRecordById(id: String): SimpleRecord? =
+
+    fun findRecordById(id: String): SimpleRecord? =
         state.chain.getChain().asSequence()
             .flatMap { it.records.asSequence() }
             .filterIsInstance<SimpleRecord>()
@@ -113,4 +115,25 @@ class VotingUseCase(
     }
 
     fun receiptFor(id: String): String? = findRecordById(id)?.receiptCtB64
+}
+
+
+
+// inside the same package as Receipt.kt
+fun receiptForRecord(
+    rec: SimpleRecord,            // ← use your actual record type name
+    electionId: String
+): ReceiptOut {
+    val createdAt = Date().toInstant().epochSecond
+    val commit = commitmentOf(electionId, rec.u16OneHot, rec.id, createdAt)
+    return ReceiptOut(
+        id = rec.id,
+        electionId = electionId,
+        commitmentB64 = encodeB64(commit),
+        serverSigB64 = encodeB64(ReceiptSigning.sign(commit)),
+        serverPubKeyB64 = ReceiptSigning.pubKeyB64,
+        createdAt = createdAt,
+        // nice-to-have for your Verify UI:
+        receiptBitsB64 = rec.u16OneHot.map(::encodeB64)
+    )
 }
