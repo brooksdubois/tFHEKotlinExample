@@ -42,3 +42,32 @@ data class BlockSummary(
     val recordCount: Int,
     val records: List<RecordSummary>
 )
+
+@Serializable
+data class VoteInCompat(
+    val id: String,
+    val name: String,
+    val address: String,
+    val age: Int,
+    val candidate: Int? = null,   // server-native
+    val vote: Int? = null,        // UI currently sends this
+    val receiptCtB64: String? = null
+) {
+    fun normalize(): VoteIn = VoteIn(
+        id = id,
+        name = name,
+        address = address,
+        age = age,
+        candidate = candidate ?: vote
+        ?: throw IllegalArgumentException("candidate (or vote) is required"),
+        receiptCtB64 = receiptCtB64
+    )
+}
+
+@Serializable
+data class VoteReceiptUi(
+    val id: String,
+    val commitment: String,
+    val receiptBitsB64: List<String>
+)
+

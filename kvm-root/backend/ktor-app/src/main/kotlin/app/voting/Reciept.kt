@@ -34,3 +34,11 @@ fun commitmentOf(
 
 fun encodeB64(bytes: ByteArray): String =
     Base64.getEncoder().encodeToString(bytes)
+
+@Serializable
+data class CastAckOut(
+    val ok: Boolean,
+    val candidate: Int,
+    val recordId: String,
+    val receiptBitsB64: List<String>? = null
+)
