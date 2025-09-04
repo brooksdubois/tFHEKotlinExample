@@ -1,6 +1,8 @@
 package app.voting
 
 import app.api.ErrorOut
+import app.routes.installMpcRoutes
+import app.routes.resolveMpcDir
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*

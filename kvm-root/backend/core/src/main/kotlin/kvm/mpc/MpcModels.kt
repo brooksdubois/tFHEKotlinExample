@@ -93,3 +93,34 @@ data class RevealOut(
     val reveals: List<MaskReveal>,
     val artifacts: List<ArtifactMeta> = emptyList()
 )
+
+@Serializable enum class MpcSource { live, upload }
+
+@Serializable
+data class StartSessionReq(
+    val source: MpcSource,
+    val ctsB64: List<String>? = null
+)
+
+@Serializable
+data class StartSessionRes(
+    val id: String,
+    val candidateCount: Int,
+    val artifacts: List<String>
+)
+
+/** Files we write to disk — keep them strongly typed */
+@Serializable
+data class InitialCtsJson(
+    val ctsB64: List<String>,
+    val candidateCount: Int
+)
+
+@Serializable
+data class ManifestJson(
+    val id: String,
+    val createdAt: String,
+    val source: String,
+    val candidateCount: Int,
+    val initialCtsSha256: String
+)

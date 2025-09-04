@@ -3,7 +3,9 @@ package app
 import app.api.ErrorOut
 import app.voting.votingRoutes
 import app.mpc.mpcRoutes
+import app.routes.resolveMpcDir
 import app.voting.ReceiptSigning
+//import app.routes.installMpcRoutes
 import io.ktor.server.application.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.contentnegotiation.*
@@ -47,15 +49,6 @@ fun Application.module() {
             throw cause
         }
     }
-//    install(ContentNegotiation) {
-//       json(
-//            kotlinx.serialization.json.Json {
-//                prettyPrint = false
-//                encodeDefaults = true
-//                ignoreUnknownKeys = true
-//            }
-//        )
-//    }
 
     votingRoutes()
     mpcRoutes()

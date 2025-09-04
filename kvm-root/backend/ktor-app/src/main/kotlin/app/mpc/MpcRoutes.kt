@@ -1,58 +1,38 @@
 package app.mpc
 
+import app.routes.resolveMpcDir
 import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.response.*
 import io.ktor.server.request.*
+import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kvm.mpc.ArtifactMeta
-import kvm.mpc.DecryptOut
-import kvm.mpc.MaskOut
-import kvm.mpc.MpcSession
-import kvm.mpc.RevealOut
-import kvm.mpc.StartOut
+import kvm.mpc.StartSessionReq
+import java.io.File
 
-fun Application.mpcRoutes(useCase: MpcUseCase = MpcUseCase()) {
+/** Mount MPC routes; no domain logic here. */
+fun Application.mpcRoutes() {
+    val mpcBaseDir = resolveMpcDir(environment)
+    val mpc = MpcUseCase(mpcBaseDir)
+
     routing {
-        route("/mpc/sessions") {
-            post("/start") {
-                val out = useCase.start(call.receive())
-                call.respond<StartOut>(out)
+        route("/mpc") {
+            route("/sessions") {
+                // POST /mpc/sessions/start
+                post("/start") {
+                    val req = call.receive<StartSessionReq>()
+                    val res = mpc.start(req)
+                    call.respond(res)
+                }
             }
-            post("/{id}/mask:server") {
-                val id = call.parameters["id"]!!
-                val out = useCase.maskServer(id, call.receive())
-                call.respond<MaskOut>(out)
-            }
-            post("/{id}/mask") {
-                val id = call.parameters["id"]!!
-                val out = useCase.mask(id, call.receive())
-                call.respond<MaskOut>(out)
-            }
-            post("/{id}/decrypt") {
-                val id = call.parameters["id"]!!
-                val out = useCase.decrypt(id, call.receive())
-                call.respond<DecryptOut>(out)
-            }
-            post("/{id}/reveal") {
-                val id = call.parameters["id"]!!
-                val out = useCase.reveal(id, call.receive())
-                call.respond<RevealOut>(out)
-            }
-            get("/{id}") {
-                val id = call.parameters["id"]!!
-                call.respond<MpcSession>(useCase.read(id))
-            }
-            get("/{id}/artifacts") {
-                val id = call.parameters["id"]!!
-                call.respond<List<ArtifactMeta>>(useCase.listArtifacts(id))
-            }
-            get("/{id}/zip") {
-                val id = call.parameters["id"]!!
-                val zip = useCase.zipSession(id)
-                val headerValue = "attachment; filename=\"${zip.fileName}\""
-                call.response.header(HttpHeaders.ContentDisposition, headerValue)
-                call.respondFile(file = zip.toFile())
+
+            // GET /mpc/artifacts/{path...} (read-only file server for artifacts)
+            get("/artifacts/{path...}") {
+                val segs = call.parameters.getAll("path") ?: return@get call.respond(HttpStatusCode.BadRequest)
+                val target = segs.fold(mpcBaseDir) { acc, s -> acc.resolve(s) }.normalize()
+                if (!target.startsWith(mpcBaseDir)) return@get call.respond(HttpStatusCode.Forbidden)
+                val f = target.toFile()
+                if (!f.exists() || f.isDirectory) return@get call.respond(HttpStatusCode.NotFound)
+                call.respondFile(f)
             }
         }
     }
