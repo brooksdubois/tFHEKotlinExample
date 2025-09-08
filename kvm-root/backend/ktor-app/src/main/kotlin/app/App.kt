@@ -62,6 +62,5 @@ fun Application.module() {
 
 /** Block-body main avoids the “main() should return Unit” false positive in some IDE states. */
 fun main() {
-
     embeddedServer(Netty, port = 8080, module = Application::module).start(wait = true)
 }

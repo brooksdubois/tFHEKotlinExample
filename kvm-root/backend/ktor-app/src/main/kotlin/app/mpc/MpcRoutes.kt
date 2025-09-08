@@ -34,6 +34,47 @@ fun Application.mpcRoutes() {
                 if (!f.exists() || f.isDirectory) return@get call.respond(HttpStatusCode.NotFound)
                 call.respondFile(f)
             }
+
+            // POST /mpc/sessions/{id}/mask:server
+            post("/{id}/mask:server") {
+                val id = call.parameters["id"]!!
+                val req = call.receive<kvm.mpc.MaskServerReq>()
+                val res = mpc.maskServer(id, req)
+                call.respond(res)
+            }
+
+            // POST /mpc/sessions/{id}/decrypt
+            post("/{id}/decrypt") {
+                val id = call.parameters["id"]!!
+                val req = call.receive<kvm.mpc.DecryptReq>()
+                val res = mpc.decrypt(id, req)
+                call.respond(res)
+            }
+
+            // POST /mpc/sessions/{id}/reveal
+            post("/{id}/reveal") {
+                val id = call.parameters["id"]!!
+                val req = call.receive<kvm.mpc.RevealReq>()
+                val res = mpc.reveal(id, req)
+                call.respond(res)
+            }
+
+            // GET /mpc/sessions/{id}  (lightweight status)
+            get("/{id}") {
+                val id = call.parameters["id"]!!
+                call.respond(mpc.status(id))
+            }
+
+            // GET /mpc/sessions/{id}/zip
+            get("/{id}/zip") {
+                val id = call.parameters["id"]!!
+                val zipBytes = mpc.zip(id)
+                call.response.header(
+                    HttpHeaders.ContentDisposition,
+                    "attachment; filename=\"session-$id.zip\""
+                )
+                call.respondBytes(zipBytes, ContentType.Application.Zip)
+            }
         }
     }
 }

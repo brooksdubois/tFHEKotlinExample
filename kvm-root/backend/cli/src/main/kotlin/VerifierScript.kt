@@ -19,13 +19,11 @@ val SEED = System.getenv("MPC_SEED")?.toLongOrNull() ?: 1337L
 val SOURCE = System.getenv("MPC_SOURCE") ?: "live" // "live" or "upload"
 
 // ---------- HTTP client ----------
-val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
+val json = Json { ignoreUnknownKeys = true; prettyPrint = true; explicitNulls = false }
 val client = HttpClient(Java) { install(ContentNegotiation) { json(json) } }
 
-// ---------- Models (minimal; only what we consume) ----------
-@Serializable data class StartReq(val source: String, val ctsB64: List<String>? = null, val candidates: Int? = null)
-@Serializable data class Sess(val id: String)
-@Serializable data class StartOut(val session: Sess)
+@Serializable data class StartReq(val source: String, val ctsB64: List<String>? = null)
+@Serializable data class StartRes(val id: String, val candidateCount: Int, val artifacts: List<String> = emptyList())
 @Serializable data class MaskServerReq(val who: String, val seed: Long? = null)
 @Serializable data class Commit(val seq: Int, val who: String, val masksHashHex: String)
 @Serializable data class MaskOut(val commit: Commit)
@@ -128,9 +126,8 @@ suspend fun runE2E() {
         val hist = castRandomVotes(votesToCast, candidateCount, voteSeed)
         println("Expected increment from seeded votes: ${hist.toList()}")
     }
-
-    val startOut: StartOut = postJson("$BASE/mpc/sessions/start", StartReq(source = SOURCE))
-    val id = startOut.session.id
+    val startRes: StartRes = postJson("$BASE/mpc/sessions/start", StartReq(source = SOURCE))
+    val id = startRes.id
     println("• started session: $id")
 
     val maskOut: MaskOut = postJson("$BASE/mpc/sessions/$id/mask:server", MaskServerReq(WHO, SEED))
