@@ -50,15 +50,19 @@ class MpcUseCase(
             else         -> json.decodeFromString<InitialCtsJson>(init.readText())
         }
     }
+
     fun start(req: StartSessionReq): StartSessionRes {
         // Defer fold to a lambda (core stays framework-agnostic)
-        val fold = { foldFromLedger() }
+        val fold = {
+            // Run the heavy fold on a background dispatcher
+            kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.Default) { foldFromLedger() }
+        }
         return startMpcSession(req, fold, mpcBaseDir)
     }
 
     /** Fold all stored votes into a per-candidate encrypted total vector (ctsB64). */
     fun foldFromLedger(): Pair<List<String>, Int> {
-        val srv = U16Server.fromCompressed(File("public/u16_server_key.bin").readBytes())
+        val srv = app.state.VotingState.u16ServerCtx
         val records = app.state.VotingState.chain.getChain()
             .flatMap { it.records }
             .filterIsInstance<kvm.model.SimpleRecord>()
@@ -84,7 +88,7 @@ class MpcUseCase(
     fun maskServer(id: String, req: MaskServerReq): MaskOut {
         val d = dir(id)
         val (ctsB64, n) = readCurrent(id).let { it.ctsB64 to it.candidateCount }
-        val srv = U16Server.fromCompressed(File("public/u16_server_key.bin").readBytes())
+        val srv = app.state.VotingState.u16ServerCtx
         // deterministic masks if seed provided (dev: default uses req.seed)
         val rnd = java.util.Random(req.seed ?: System.currentTimeMillis())
         val masks: List<Int> = List(n) { rnd.nextInt(0x10000) } // 0..65535
