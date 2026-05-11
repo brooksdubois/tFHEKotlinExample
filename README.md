@@ -4,6 +4,12 @@ Kotlin BB Vote is an experimental encrypted voting demo built around Kotlin, Kto
 
 The idea is that anyone can see that their vote is there with their reciept, however, they can actually decrypt and validate that who they voted for is who they voted for... then, by combining a few keys together, anyone can _tally_ all of the votes themselves. This is leveraging tFHE to accomplish the tallying by utilizing public key, private key, cloud key encryption. 
 
+The project is split into two main parts:
+
+- `kvm-root`: the Gradle backend workspace, including the Ktor API, verifier CLI, Kotlin domain logic, and Rust TFHE bridge.
+- `voting-ui-2`: the SolidStart frontend, which talks to the Ktor backend through a tRPC server layer.
+
+
 ### Vote Reciept Verification GUI:
 
 <img width="1151" height="729" alt="Screenshot 2026-05-11 at 4 20 05 PM" src="https://github.com/user-attachments/assets/6f4ae30f-2c46-4adb-b079-d69bc64e18cf" />
@@ -12,12 +18,9 @@ The idea is that anyone can see that their vote is there with their reciept, how
 
 <img width="1161" height="678" alt="Screenshot 2026-05-11 at 4 18 38 PM" src="https://github.com/user-attachments/assets/0cae2ada-83d3-4a85-bd74-07203c3d5527" />
 
-The project is split into two main parts:
+#### !!Disclaimer!!: 
 
-- `kvm-root`: the Gradle backend workspace, including the Ktor API, verifier CLI, Kotlin domain logic, and Rust TFHE bridge.
-- `voting-ui-2`: the SolidStart frontend, which talks to the Ktor backend through a tRPC server layer.
-
-The current app is best understood as a portfolio/demo project for encrypted computation and cross-language integration. It is not a production voting system.
+The current app is a portfolio/demo project for encrypted computation and cross-language integration. It is not a production voting system.
 
 ## Tech Stack
 
