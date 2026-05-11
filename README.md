@@ -2,6 +2,16 @@
 
 Kotlin BB Vote is an experimental encrypted voting demo built around Kotlin, Ktor, Rust, JNI, and Zama's TFHE libraries. The backend records votes in a small Kotlin blockchain-style ledger, encrypts each ballot as a one-hot `u16` vector, and supports an MPC-style tally flow where encrypted totals can be masked, decrypted, and publicly unmasked into final counts.
 
+The idea is that anyone can see that their vote is there with their reciept, however, they can actually decrypt and validate that who they voted for is who they voted for... then, by combining a few keys together, anyone can _tally_ all of the votes themselves. This is leveraging tFHE to accomplish the tallying by utilizing public key, private key, cloud key encryption. 
+
+### Vote Reciept Verification GUI:
+
+<img width="1151" height="729" alt="Screenshot 2026-05-11 at 4 20 05 PM" src="https://github.com/user-attachments/assets/6f4ae30f-2c46-4adb-b079-d69bc64e18cf" />
+
+### Tally GUI:
+
+<img width="1161" height="678" alt="Screenshot 2026-05-11 at 4 18 38 PM" src="https://github.com/user-attachments/assets/0cae2ada-83d3-4a85-bd74-07203c3d5527" />
+
 The project is split into two main parts:
 
 - `kvm-root`: the Gradle backend workspace, including the Ktor API, verifier CLI, Kotlin domain logic, and Rust TFHE bridge.
