@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+/* tiny design tokens */
+@layer components {
+    .btn { @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-black/10 hover:bg-black/5 active:translate-y-px; }
+    .card { @apply rounded-xl border border-black/10 bg-white/70 p-3 shadow-sm; }
+    .muted { @apply opacity-60; }
+}
