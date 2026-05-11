@@ -1,0 +1,83 @@
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+*.launch
+.settings/
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+bun-debug.log*
+
+# Migration backups / local Git artifacts
+.git-root-backup/
+.git-kvm-old-backup/
+*.bundle
+
+# Gradle / Kotlin
+.gradle/
+.kotlin/
+**/build/
+**/out/
+*.class
+*.jar
+*.war
+*.ear
+*.kts~
+!kvm-root/gradle/wrapper/gradle-wrapper.jar
+
+# Rust / Cargo
+**/target/
+*.so
+*.dylib
+*.dll
+*.dSYM/
+
+# Frontend dependencies and build output
+**/node_modules/
+**/dist/
+**/.vinxi/
+**/.output/
+**/.wrangler/
+**/.vercel/
+**/.netlify/
+**/app.config.timestamp_*.js
+
+# Generated backend runtime artifacts
+kvm-root/public/
+kvm-root/receipts/
+kvm-root/verifier/
+kvm-root/data/mpc/
+
+# Local MPC / verifier outputs if commands are run from repo root
+public/
+receipts/
+verifier/
+data/mpc/
+u16_tally_ciphertexts.json
+masked_*.json
+masks_*.json
+masked_plain.json
+totals.json
+verified_vote.json
+encrypted_user_votes.json

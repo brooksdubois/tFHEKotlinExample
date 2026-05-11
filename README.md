@@ -1,52 +1,57 @@
-# Kotlin BB Vote Backend
+# Kotlin BB Vote
 
-This is the Gradle/Kotlin backend workspace for Kotlin BB Vote, an experimental encrypted voting demo built with Kotlin, Ktor, Rust, JNI, and Zama's TFHE libraries.
+Kotlin BB Vote is an experimental encrypted voting demo built around Kotlin, Ktor, Rust, JNI, and Zama's TFHE libraries. The backend records votes in a small Kotlin blockchain-style ledger, encrypts each ballot as a one-hot `u16` vector, and supports an MPC-style tally flow where encrypted totals can be masked, decrypted, and publicly unmasked into final counts.
 
-The full project also includes a SolidStart frontend in `../voting-ui-2`. This README focuses on the backend, native bridge, and verifier CLI.
+The project is split into two main parts:
 
-## Project Shape
+- `kvm-root`: the Gradle backend workspace, including the Ktor API, verifier CLI, Kotlin domain logic, and Rust TFHE bridge.
+- `voting-ui-2`: the SolidStart frontend, which talks to the Ktor backend through a tRPC server layer.
 
-Gradle modules:
+The current app is best understood as a portfolio/demo project for encrypted computation and cross-language integration. It is not a production voting system.
 
-```text
-:backend:core      Kotlin blockchain, voting models, MPC models
-:backend:crypto    Kotlin/JNI wrappers around the Rust TFHE bridge
-:backend:ktor-app  Ktor HTTP API
-:backend:cli       Local verifier and MPC utility CLI
-```
+## Tech Stack
 
-The current backend run command is:
-
-```bash
-./gradlew :backend:ktor-app:run
-```
-
-Older notes may reference `:backend:run`, `:kvm-blockchain:run`, or `:verifier:run`; those module names are stale.
+- Kotlin JVM 2.0.21
+- Gradle 8.12 wrapper
+- Ktor 2.3.x
+- Rust `cdylib` exposed to Kotlin through JNI
+- Zama `tfhe` Rust crate
+- SolidStart, Vinxi, tRPC, Tailwind, Bun
 
 ## Quick Start
 
+Run these commands from the workspace root unless noted otherwise.
+
 ### 1. Build the Rust TFHE Bridge
 
-Gradle expects the native library to exist under the Rust crate's release output directory.
+Gradle expects the native library to already exist under the Rust crate's release output directory.
 
 ```bash
-cd backend/crypto/tfhe-bridge
+cd kvm-root/backend/crypto/tfhe-bridge
 cargo build --release
 ```
 
 On macOS this produces:
 
 ```text
-backend/crypto/tfhe-bridge/target/release/libtfhe_bridge.dylib
+kvm-root/backend/crypto/tfhe-bridge/target/release/libtfhe_bridge.dylib
 ```
 
 On Linux or Windows, the library extension will differ, but the Kotlin loader checks the same release directory.
 
-### 2. Start Ktor
+### 2. Start the Ktor Backend
 
-From this directory:
+Install jdk 17 with [SDKman!]("https://sdkman.io/")
 
 ```bash
+sdk install java 17.0.12-graal
+sdk use java 17.0.12-graal
+```
+
+Run the backend project
+
+```bash
+cd kvm-root
 ./gradlew :backend:ktor-app:run
 ```
 
@@ -56,7 +61,7 @@ The backend runs at:
 http://localhost:8080
 ```
 
-Smoke check:
+Useful smoke check:
 
 ```bash
 curl http://localhost:8080/
@@ -64,22 +69,54 @@ curl http://localhost:8080/
 
 ### 3. Start the Frontend
 
-In another terminal, from the workspace root:
+In another terminal:
 
 ```bash
 cd voting-ui-2
+mv env.example .env
 bun install
 bun run dev
 ```
 
+The SolidStart dev server usually runs at:
+
+```text
+http://localhost:3000
+```
+
 The frontend defaults to `KTOR_HOST=http://localhost:8080`.
+
+## Backend Layout
+
+The Gradle project lives in `kvm-root` and includes these modules:
+
+```text
+:backend:core      Kotlin blockchain, voting models, MPC models
+:backend:crypto    Kotlin/JNI wrappers around the Rust TFHE bridge
+:backend:ktor-app  Ktor HTTP API
+:backend:cli       Local verifier and MPC utility CLI
+```
+
+The backend run task is:
+
+```bash
+cd kvm-root
+./gradlew :backend:ktor-app:run
+```
+
+The CLI run task is:
+
+```bash
+cd kvm-root
+./gradlew :backend:cli:run --args="<command>"
+```
 
 ## Rust Integration
 
-The Rust crate lives at:
+The Rust crate is here:
 
 ```text
-backend/crypto/tfhe-bridge
+kvm-root/backend/crypto/tfhe-bridge
 ```
 
 It builds a dynamic library with:
@@ -88,7 +125,7 @@ It builds a dynamic library with:
 crate-type = ["cdylib"]
 ```
 
-The Kotlin wrappers live in `backend/crypto`. Both the Ktor app and CLI set:
+Kotlin loads that library through JNI. Both the Ktor app and CLI set:
 
 ```text
 -Djava.library.path=backend/crypto/tfhe-bridge/target/release
@@ -97,19 +134,20 @@ The Kotlin wrappers live in `backend/crypto`. Both the Ktor app and CLI set:
 If native loading fails, rebuild the Rust crate:
 
 ```bash
-cd backend/crypto/tfhe-bridge
+cd kvm-root/backend/crypto/tfhe-bridge
 cargo build --release
 ```
 
 You can also override the native library path explicitly:
 
 ```bash
+cd kvm-root
 TFHE_BRIDGE_PATH=/absolute/path/to/libtfhe_bridge.dylib ./gradlew :backend:ktor-app:run
 ```
 
 ## Main API Endpoints
 
-When Ktor is running on port `8080`:
+When the Ktor backend is running on port `8080`:
 
 ```text
 GET  /                         health check
@@ -132,6 +170,12 @@ GET  /mpc/artifacts/{path...}   fetch a specific artifact
 ## In-Depth Usage
 
 ### Cast a Vote
+
+From the backend directory:
+
+```bash
+cd kvm-root
+```
 
 ```bash
 curl -sSf http://localhost:8080/vote \
@@ -160,6 +204,8 @@ curl -sSf http://localhost:8080/user-votes \
 ```
 
 ### Fold Ballots Into Encrypted Totals
+
+The CLI can fold all encrypted one-hot ballots into one encrypted total per candidate:
 
 ```bash
 ./gradlew :backend:cli:run --args="fold \
@@ -247,7 +293,39 @@ curl -sSf "http://localhost:8080/mpc/sessions/$SID/reveal" \
   -d '{"who":"A","masks":[/* paste masks_A.json array here */]}' | jq .
 ```
 
-The GUI in `../voting-ui-2` wraps this flow on its `/mpc` route.
+For the easiest path, use the GUI at `/mpc`; it starts a live session, masks, decrypts, fetches the mask artifact from the ZIP, reveals, and displays totals.
+
+## Frontend Notes
+
+The frontend lives in `voting-ui-2`.
+
+```bash
+cd voting-ui-2
+bun install
+bun run dev
+```
+
+The tRPC backend adapter reads:
+
+```text
+KTOR_HOST=http://localhost:8080
+```
+
+If the Ktor server is on a different port:
+
+```bash
+KTOR_HOST=http://localhost:9090 bun run dev
+```
+
+The frontend routes of interest are:
+
+```text
+/          ledger/tally overview
+/ballot    cast a ballot
+/lookup    lookup a tracker id
+/verify    receipt-oriented verification UI
+/mpc       start and run the MPC tally flow
+```
 
 ## Common Problems
 
@@ -256,22 +334,33 @@ The GUI in `../voting-ui-2` wraps this flow on its `/mpc` route.
 Rebuild the Rust bridge:
 
 ```bash
-cd backend/crypto/tfhe-bridge
+cd kvm-root/backend/crypto/tfhe-bridge
 cargo build --release
 ```
 
 Then restart Ktor:
 
 ```bash
+cd kvm-root
 ./gradlew :backend:ktor-app:run
 ```
+
+### Wrong Gradle Command
+
+The current backend module is:
+
+```bash
+./gradlew :backend:ktor-app:run
+```
+
+Older notes may reference `:backend:run`, `:kvm-blockchain:run`, or `:verifier:run`; those are stale.
 
 ### Frontend Cannot Reach Backend
 
 Make sure Ktor is running on `8080`, or set `KTOR_HOST` when starting the frontend:
 
 ```bash
-cd ../voting-ui-2
+cd voting-ui-2
 KTOR_HOST=http://localhost:8080 bun run dev
 ```
 
@@ -280,6 +369,7 @@ KTOR_HOST=http://localhost:8080 bun run dev
 Useful project checks:
 
 ```bash
+cd kvm-root
 ./gradlew projects
 ./gradlew :backend:ktor-app:tasks --group application
 ./gradlew :backend:cli:tasks --group application
@@ -288,5 +378,13 @@ Useful project checks:
 Build the backend:
 
 ```bash
+cd kvm-root
 ./gradlew build
+```
+
+Build the frontend:
+
+```bash
+cd voting-ui-2
+bun run build
 ```
